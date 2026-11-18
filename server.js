@@ -7,9 +7,9 @@ const QRCode = require('qrcode');
 const PORT = process.env.PORT || 3000;
 const STATE_FILE = path.join(__dirname, 'rooms-state.json');
 
-// Хранилище комнат: pin (4 цифры) -> объект состояния
+// Room storage: 4-digit PIN -> room state object
 const rooms = new Map();
-// Подписчики SSE по pin: pin -> Set(res)
+// SSE subscribers per PIN: pin -> Set(res)
 const clients = new Map();
 
 function saveState() {
@@ -17,7 +17,7 @@ function saveState() {
     const obj = Object.fromEntries(rooms);
     fs.writeFileSync(STATE_FILE, JSON.stringify(obj, null, 2), 'utf8');
   } catch (err) {
-    console.error('Ошибка сохранения состояния:', err.message);
+    console.error('Failed to save state:', err.message);
   }
 }
 
@@ -31,14 +31,14 @@ function loadState() {
         rooms.set(pin, room);
       }
     }
-    console.log(`Восстановлено комнат из файла: ${rooms.size}`);
+    console.log(`Restored rooms from state file: ${rooms.size}`);
   } catch (err) {
-    console.error('Ошибка загрузки состояния:', err.message);
+    console.error('Failed to load state:', err.message);
   }
 }
 
 /**
- * Возвращает первый не-loopback IPv4 адрес машины в локальной сети (для QR-кодов в Wi-Fi).
+ * Returns the first non-loopback IPv4 address for local Wi-Fi QR codes.
  */
 function getLanIp() {
   const nets = os.networkInterfaces();
@@ -57,7 +57,7 @@ const LAN_IP = getLanIp();
 const LAN_ORIGIN = LAN_IP ? `http://${LAN_IP}:${PORT}` : null;
 
 /**
- * Генерирует уникальный 4-значный PIN-код от 1000 до 9999.
+ * Generates a unique 4-digit PIN between 1000 and 9999.
  */
 function generateUniquePin() {
   for (let i = 0; i < 10000; i++) {
@@ -66,18 +66,18 @@ function generateUniquePin() {
       return pin;
     }
   }
-  throw new Error('Все 4-значные PIN-коды заняты');
+  throw new Error('All 4-digit PIN codes are currently in use');
 }
 
 /**
- * Создаёт новую изолированную комнату (или возвращает существующую, если передан requestedPin).
+ * Creates a new isolated room or returns an existing one if requestedPin is provided.
  */
 function createRoom(requestedPin = null) {
   let pin;
   if (requestedPin !== null && requestedPin !== undefined && requestedPin !== '') {
     const clean = String(requestedPin).trim();
     if (!/^\d{4}$/.test(clean)) {
-      throw new Error('PIN должен состоять из 4 цифр');
+      throw new Error('PIN must be 4 digits');
     }
     if (rooms.has(clean)) {
       return rooms.get(clean);
@@ -90,18 +90,18 @@ function createRoom(requestedPin = null) {
   const room = {
     pin,
     status: 'idle', // 'idle' | 'running' | 'paused'
-    durationSec: 900, // 15 минут по умолчанию
+    durationSec: 900, // 15 minutes default
     remainingMs: 900 * 1000,
     endTimeMs: null,
     message: '',
     showMessage: false,
     settings: {
-      blackBackground: false,  // false = цветной фон, true = чёрный экран и цветные цифры
-      yellowThresholdSec: 300, // за 5 минут (300 сек)
-      redThresholdSec: 60,     // за 1 минуту (60 сек)
-      greenColor: '#16a34a',   // зелёный цвет
-      yellowColor: '#eab308',  // жёлтый цвет
-      redColor: '#dc2626'      // красный цвет
+      blackBackground: false,  // false = colored background, true = black screen with colored digits
+      yellowThresholdSec: 300, // 5 minutes before 00:00
+      redThresholdSec: 60,     // 1 minute before 00:00
+      greenColor: '#16a34a',
+      yellowColor: '#eab308',
+      redColor: '#dc2626'
     }
   };
   rooms.set(pin, room);
@@ -169,7 +169,7 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
   const searchParams = parsedUrl.searchParams;
 
-  // Healthcheck для облачных платформ, Docker и мониторинга
+  // Healthcheck for cloud platforms, Docker, and uptime monitors
   if (pathname === '/health' && req.method === 'GET') {
     sendJson(res, 200, {
       ok: true,
@@ -179,26 +179,26 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Главная страница — редирект на админку пульта
+  // Root redirects to remote control page
   if (pathname === '/' && req.method === 'GET') {
     res.writeHead(302, { Location: '/control' });
     res.end();
     return;
   }
 
-  // Экран сцены (/stage)
+  // Stage display (/stage)
   if (pathname === '/stage' && req.method === 'GET') {
     serveStaticFile(res, path.join(__dirname, 'public', 'stage.html'), 'text/html; charset=utf-8');
     return;
   }
 
-  // Пульт организатора (/control)
+  // Remote control (/control)
   if (pathname === '/control' && req.method === 'GET') {
     serveStaticFile(res, path.join(__dirname, 'public', 'control.html'), 'text/html; charset=utf-8');
     return;
   }
 
-  // Создание новой комнаты/пульта (случайный PIN или восстановление по заданному PIN)
+  // Create a new room (random PIN) or restore/open by specified PIN
   if (pathname === '/api/create-room' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -209,29 +209,29 @@ const server = http.createServer(async (req, res) => {
         const room = createRoom(requestedPin);
         sendJson(res, 200, serializeRoom(room));
       } catch (err) {
-        const status = err.message && err.message.includes('4 цифр') ? 400 : 500;
-        sendJson(res, status, { error: err.message || 'Ошибка создания пульта' });
+        const status = err.message && err.message.includes('4 digits') ? 400 : 500;
+        sendJson(res, status, { error: err.message || 'Failed to create room' });
       }
     });
     return;
   }
 
-  // Проверка существования пульта по PIN
+  // Check if a room exists by PIN
   if (pathname === '/api/room-exists' && req.method === 'GET') {
     const pin = String(searchParams.get('pin') || '').trim();
     if (pin && rooms.has(pin)) {
       sendJson(res, 200, { ok: true, pin, lanOrigin: LAN_ORIGIN });
     } else {
-      sendJson(res, 404, { ok: false, error: 'Пульт с таким PIN не найден' });
+      sendJson(res, 404, { ok: false, error: 'Room with this PIN was not found' });
     }
     return;
   }
 
-  // Генерация SVG QR-кода для ссылки на /stage?pin=XXXX
+  // Generate SVG QR code for /stage?pin=XXXX link
   if (pathname === '/api/qr' && req.method === 'GET') {
     const targetUrl = String(searchParams.get('url') || '').trim();
     if (!targetUrl) {
-      sendJson(res, 400, { error: 'Параметр url обязателен' });
+      sendJson(res, 400, { error: 'Query parameter "url" is required' });
       return;
     }
     try {
@@ -246,12 +246,12 @@ const server = http.createServer(async (req, res) => {
       });
       res.end(svg);
     } catch (err) {
-      sendJson(res, 500, { error: 'Ошибка генерации QR-кода' });
+      sendJson(res, 500, { error: 'Failed to generate QR code' });
     }
     return;
   }
 
-  // SSE поток для синхронизации в реальном времени (/api/events?pin=XXXX)
+  // SSE stream for real-time sync (/api/events?pin=XXXX)
   if (pathname === '/api/events' && req.method === 'GET') {
     const pin = String(searchParams.get('pin') || '').trim();
 
@@ -278,7 +278,7 @@ const server = http.createServer(async (req, res) => {
     }
     clients.get(pin).add(res);
 
-    // Сразу отправляем актуальное состояние при подключении/переподключении
+    // Send current state immediately on connect/reconnect
     res.write(`data: ${JSON.stringify(serializeRoom(room))}\n\n`);
 
     req.on('close', () => {
@@ -288,7 +288,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Управление комнатой (/api/action)
+  // Room control actions (/api/action)
   if (pathname === '/api/action' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -299,7 +299,7 @@ const server = http.createServer(async (req, res) => {
         const room = rooms.get(pin);
 
         if (!room) {
-          sendJson(res, 404, { error: 'Комната не найдена' });
+          sendJson(res, 404, { error: 'Room not found' });
           return;
         }
 
@@ -403,8 +403,7 @@ const server = http.createServer(async (req, res) => {
   res.end('Not found');
 });
 
-// Периодический keep-alive пинг каждые 15 секунд для поддержания SSE-соединения
-// и синхронизации часов клиентов
+// Keep-alive broadcast every 15s to prevent proxy timeouts and sync client clocks
 setInterval(() => {
   for (const pin of clients.keys()) {
     broadcastRoom(pin);
@@ -415,12 +414,12 @@ loadState();
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`================================================`);
-  console.log(`Stage Timer запущен на порту ${PORT}`);
-  console.log(`Пульт (локально):   http://localhost:${PORT}/control`);
-  console.log(`Сцена (локально):   http://localhost:${PORT}/stage`);
+  console.log(`Stage Timer listening on port ${PORT}`);
+  console.log(`Control (local): http://localhost:${PORT}/control`);
+  console.log(`Stage (local):   http://localhost:${PORT}/stage`);
   if (LAN_ORIGIN) {
-    console.log(`Пульт (по Wi-Fi):   ${LAN_ORIGIN}/control`);
-    console.log(`Сцена (по Wi-Fi):   ${LAN_ORIGIN}/stage`);
+    console.log(`Control (LAN):   ${LAN_ORIGIN}/control`);
+    console.log(`Stage (LAN):     ${LAN_ORIGIN}/stage`);
   }
   console.log(`================================================`);
 });

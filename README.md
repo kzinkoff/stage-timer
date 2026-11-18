@@ -1,52 +1,52 @@
-# Stage Timer — таймер сцены для конференций
+# Stage Timer
 
-Лёгкое веб-приложение для отображения обратного отсчёта на планшете перед спикером (`/stage`) и удалённого управления с телефона или ноутбука организатора (`/control`).
+A lightweight, real-time countdown timer web application for conference stages (`/stage`) with remote control from a phone or laptop (`/control`).
 
-Не требует установки приложений на планшет — всё работает в браузере, а залы полностью изолируются друг от друга с помощью уникального **4-значного PIN-кода** и **QR-кода**.
-
----
-
-## Возможности
-
-- **Изоляция залов по PIN и QR-коду:** в каждом зале организатор нажимает «+ Создать новый пульт», получает свой 4-значный PIN и QR-код (`/stage?pin=XXXX`). Разные залы никак не мешают друг другу.
-- **Перехват / восстановление пульта по PIN:** если у организатора сел ноутбук, он открывает `/control` с телефона, вводит 4 цифры PIN с экрана планшета — и управление мгновенно переходит к нему без подхода к сцене.
-- **Два цветовых режима экрана:**
-  - *Цветной фон* — весь экран залит зелёным / жёлтым / красным, цифры белые.
-  - *Чёрный экран (цветные буквы)* — чёрный фон `#000000` и яркие цветные цифры (не слепит сцену в тёмном зале).
-- **Гибкие пороги и цвета:** задаётся в минутах и секундах до `00:00`, когда таймер желтеет и краснеет, плюс выбор любых цветов.
-- **Перерасход времени (Overtime):** после `00:00` в обоих режимах весь экран мигает красным, появляется крупная надпись `ВРЕМЯ!`, и счётчик идёт в минус (`-00:01`, `-00:02`...).
-- **Сообщения спикеру:** пресеты («Ещё 2 минуты», «Переходи к вопросам», «Время вышло!») или произвольный текст, который появляется огромным шрифтом под таймером (цифры времени автоматически уменьшаются, чтобы всё читалось с 5+ метров). На пульте во время показа мигает красный кружок `● НА ЭКРАНЕ`.
-- **Точная синхронизация без расхождений:** время считается не тиками по сети, а от целевого серверного timestamp (`endTimeMs`) с учётом сдвига часов клиента (`serverTimeOffset`). При обрыве и восстановлении связи планшет сам подтягивает актуальное состояние.
-- **Устойчивость к перезапуску:** состояние всех комнат автоматически сохраняется в `rooms-state.json` и восстанавливается при старте сервера.
-- **Защита от гашения экрана:** встроенный `Wake Lock API` + полноэкранный режим на `/stage`.
+No native app installation required — everything runs in a mobile or tablet browser, and multiple halls/rooms are completely isolated using unique **4-digit PIN codes** and **QR codes**.
 
 ---
 
-## Структура проекта
+## Features
+
+- **Room Isolation via PIN & QR Code:** Every organizer clicks **"+ Create New Remote"** on `/control` to get a unique 4-digit PIN and a scannable QR code (`/stage?pin=XXXX`). Different rooms never interfere with each other.
+- **Take Over / Restore by PIN:** If your laptop dies mid-talk, open `/control` on your phone, enter the 4-digit PIN shown on the stage tablet, and take over control immediately without walking up to the stage.
+- **Two Display Modes:**
+  - *Colored Background* — full screen changes color per threshold (green / yellow / red) with crisp white digits.
+  - *Black Screen (Colored Digits)* — pure black `#000000` background with bright colored digits so the tablet doesn't glare in a dark auditorium.
+- **Customizable Thresholds & Colors:** Set exact minutes and seconds before `00:00` when the timer turns yellow and red, and pick custom hex colors from the remote.
+- **Overtime Alert:** Past `00:00` in both modes, the entire stage screen flashes red, displays `TIME'S UP!`, and counts overtime negatively (`-00:01`, `-00:02`...).
+- **Speaker Messages:** Send quick presets (*"2 minutes left"*, *"Move to Q&A"*, *"Time's up!"*) or custom text. The message appears in huge text below the clock while timer digits automatically scale down to fit cleanly. While a message is visible on stage, a pulsing red **`● ON SCREEN`** indicator blinks on the remote.
+- **Drift-Free Sync:** Time is calculated from a target server timestamp (`endTimeMs`) adjusted for client clock skew (`serverTimeOffset`) over Server-Sent Events (SSE) — no network ticks, instant auto-resync after reconnects.
+- **Restart Persistence:** Active rooms, timers, and color settings are automatically saved to `rooms-state.json` and restored on server restart.
+- **Screen Wake Lock:** Uses the browser `Wake Lock API` plus fullscreen mode on `/stage` to keep the tablet screen awake.
+
+---
+
+## Project Structure
 
 ```text
 stage-timer/
-├── server.js           # Node.js сервер (HTTP + SSE + генерация SVG QR-кодов)
+├── server.js           # Node.js HTTP + SSE server + SVG QR generator
 ├── public/
-│   ├── stage.html      # Экран планшета на сцене (/stage)
-│   └── control.html    # Пульт организатора (/control)
+│   ├── stage.html      # Stage tablet display (/stage)
+│   └── control.html    # Organizer remote control (/control)
 ├── package.json
-├── Dockerfile          # Образ для Docker
-├── docker-compose.yml  # Быстрый запуск на своём сервере
-├── render.yaml         # Конфигурация для Render.com
-├── VIBECODING_SPEC.md  # Мастер-промпт и схема API для других вайбкодинг-платформ
+├── Dockerfile          # Production container image
+├── docker-compose.yml  # One-command deployment on a VPS
+├── render.yaml         # Render.com Blueprint config
+├── VIBECODING_SPEC.md  # Copy-paste master prompt & API spec for AI builders
 └── README.md
 ```
 
 ---
 
-## Вариант 1. Запуск на своём сервере с выделенным IP (для сисадмина)
+## Option 1: Deploy on Your Own Server (VPS / Dedicated IP)
 
-Приложение написано на Node.js без тяжёлых зависимостей (единственный пакет — `qrcode`), занимает ~30 МБ RAM и спокойно держит десятки залов одновременно.
+The server uses pure Node.js with only one dependency (`qrcode`), consumes ~30 MB RAM, and handles dozens of simultaneous rooms.
 
-### Способ А: Через Docker (самый быстрый)
+### Method A: Docker (Recommended)
 
-Требуется установленный Docker и Docker Compose:
+Requires Docker and Docker Compose:
 
 ```bash
 git clone https://github.com/kzinkoff/stage-timer.git
@@ -54,10 +54,10 @@ cd stage-timer
 docker compose up -d --build
 ```
 
-Сервер запустится на порту `3000` (проверить: `curl http://localhost:3000/health`).
-Чтобы сменить порт, запустите с переменной `PORT=8080 docker compose up -d --build`.
+The server will listen on port `3000` (check with `curl http://localhost:3000/health`).  
+To use a different port: `PORT=8080 docker compose up -d --build`.
 
-### Способ Б: Напрямую через Node.js (`>= 18`) + PM2 / systemd
+### Method B: Node.js (`>= 18`) + PM2 / systemd
 
 ```bash
 git clone https://github.com/kzinkoff/stage-timer.git
@@ -65,14 +65,14 @@ cd stage-timer
 npm ci --omit=dev
 ```
 
-Запуск через **PM2**:
+Run with **PM2**:
 ```bash
 npm install -g pm2
 PORT=3000 pm2 start server.js --name stage-timer
 pm2 save
 ```
 
-Или пример юнита **systemd** (`/etc/systemd/system/stage-timer.service`):
+Or create a **systemd** unit (`/etc/systemd/system/stage-timer.service`):
 ```ini
 [Unit]
 Description=Stage Timer Server
@@ -92,32 +92,32 @@ WantedBy=multi-user.target
 
 ---
 
-### Важно: Настройка HTTPS и прокси (Caddy или Nginx)
+### Important: HTTPS & Reverse Proxy (Caddy or Nginx)
 
-> **Почему нужен HTTPS (домен с SSL):**
-> Современные браузеры на iPad (Safari) и Android (Chrome) разрешают программную блокировку сна экрана (**Wake Lock API**) только по `https://` или `localhost`. Если открыть сайт по обычному `http://<IP>:3000`, Wake Lock браузером заблокируется, и придётся отключать сон в настройках самого планшета.
+> **Why HTTPS matters:**
+> Mobile browsers on iPad (Safari) and Android (Chrome) only allow the **Screen Wake Lock API** over `https://` or `localhost`. If you open `/stage` over plain `http://<IP>:3000`, the browser will block Wake Lock and you will need to disable auto-lock in the tablet's OS settings.
 
-#### Вариант 1: Caddy (HTTPS настраивается автоматически за 1 минуту)
+#### Caddy (Automatic HTTPS in 3 lines)
 
-Если к серверу привязан домен `timer.example.com`, установите Caddy и укажите в `/etc/caddy/Caddyfile`:
+Point your domain (e.g. `timer.example.com`) to the server IP and put this in `/etc/caddy/Caddyfile`:
 
 ```caddyfile
 timer.example.com {
     reverse_proxy 127.0.0.1:3000
 }
 ```
-Caddy сам получит SSL-сертификат Let's Encrypt и корректно проксирует SSE-потоки без дополнительной настройки.
+Caddy automatically provisions Let's Encrypt SSL certificates and handles SSE streams out of the box.
 
-#### Вариант 2: Nginx
+#### Nginx
 
-Для работы синхронизации в реальном времени через **SSE (`/api/events`)** в Nginx **обязательно** нужно отключить буферизацию (`proxy_buffering off;`) и увеличить таймаут чтения:
+For real-time **SSE (`/api/events`)** updates to arrive immediately without buffering, you **must** set `proxy_buffering off;` and a long `proxy_read_timeout`:
 
 ```nginx
 server {
     listen 80;
     server_name timer.example.com;
 
-    # После настройки SSL через certbot здесь будет listen 443 ssl;
+    # Add SSL configuration via certbot (`certbot --nginx -d timer.example.com`)
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -128,7 +128,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # Критично для мгновенной доставки SSE-событий:
+        # Required for instant SSE delivery:
         proxy_set_header Connection "";
         proxy_buffering off;
         proxy_cache off;
@@ -138,33 +138,32 @@ server {
 }
 ```
 
-Для выпуска бесплатного HTTPS-сертификата: `certbot --nginx -d timer.example.com`.
+---
+
+## Option 2: Cloud Hosting Without Managing a Server
+
+- **Render.com:** Connect this repository as a *Blueprint* or *Web Service* — `render.yaml` is already included (`buildCommand: npm install`, `startCommand: node server.js`, `healthCheckPath: /health`).
+  - *Tip for Render free tier:* Free instances sleep after 15 minutes of inactivity. During your event, set up a free ping monitor (e.g. [cron-job.org](https://cron-job.org/) or [UptimeRobot](https://uptimerobot.com/)) targeting `https://<your-app>.onrender.com/health` every 5 minutes.
+- **Railway.app / Fly.io / PaaS providers:** Import this repository; the platform detects `Dockerfile` or `package.json` (`npm start`) and provides HTTPS automatically.
 
 ---
 
-## Вариант 2. Облачный деплой без своего сервера
+## Option 3: Recreate or Host on AI / Vibe-Coding Platforms
 
-- **Render.com:** создайте аккаунт, выберите *New → Blueprint* (или *Web Service*), подключите этот репозиторий — файл `render.yaml` уже готов (`buildCommand: npm install`, `startCommand: node server.js`, `healthCheckPath: /health`).
-  - *Совет для бесплатного тарифа Render:* бесплатный инстанс засыпает через 15 минут без запросов. На время конференции создайте бесплатный монитор в [cron-job.org](https://cron-job.org/) или [UptimeRobot](https://uptimerobot.com/), который будет запрашивать `https://<ваш-домен>.onrender.com/health` каждые 5 минут.
-- **Railway.app / Timeweb Cloud Apps / Amvera:** импортируйте репозиторий из GitHub. Платформа сама увидит `Dockerfile` или `package.json` (`npm start`), запустит на нужном `PORT` и выдаст готовый `https://` домен.
-
----
-
-## Вариант 3. Запуск в других вайбкодинг-платформах
-
-Если вы хотите перенести проект или пересобрать его на **Lovable, Bolt.new, Replit, v0, Base44**, откройте файл **[VIBECODING_SPEC.md](./VIBECODING_SPEC.md)** — там лежит готовый мастер-промпт с полным описанием логики, JSON-схемой комнаты и подсказками для Supabase/Firebase.
+Want to rebuild or customize this app inside **Lovable, Bolt.new, Replit, v0, or Base44**?  
+See **[VIBECODING_SPEC.md](./VIBECODING_SPEC.md)** for a complete copy-paste master prompt, data schema, and Supabase/Firebase adaptation notes.
 
 ---
 
-## Памятка для организаторов на площадке
+## Event Day Checklist for Organizers
 
-### 1. Подготовка планшета для сцены (`/stage`)
-1. Подключите планшет к питанию/пауэрбанку и к Wi-Fi (или вставьте SIM-карту).
-2. На всякий случай отключите автоблокировку в настройках самого планшета (*iPad: Экран и яркость → Автоблокировка → Никогда*; *Android: Настройки → Экран → Спящий режим / Не выключать при зарядке*).
-3. Откройте на пультe организатора `/control`, нажмите **«+ Создать новый пульт»** — на экране появятся **PIN-код** и **QR-код**.
-4. Отсканируйте QR-код камерой планшета (или откройте `/stage` и введите 4-значный PIN на экранной клавиатуре).
-5. Коснитесь экрана планшета и нажмите **«На весь экран»** — вверху загорится статус `☀️ Экран не гаснет`. Поставьте планшет на стойку перед спикером.
+### 1. Setting up the Stage Tablet (`/stage`)
+1. Connect the tablet to power/powerbank and Wi-Fi (or LTE).
+2. As a failsafe, disable screen auto-lock in the tablet's OS settings (*iPad: Settings → Display & Brightness → Auto-Lock → Never*; *Android: Settings → Display → Screen Timeout / Stay Awake while charging*).
+3. On your phone or laptop, open `/control` and tap **"+ Create New Remote"** — a 4-digit PIN and QR code will appear.
+4. Scan the QR code with the stage tablet camera (or open `/stage` and enter the 4-digit PIN using the on-screen keypad).
+5. Tap the stage screen and press **Fullscreen** — the top badge will turn into `☀️ Screen Awake`.
 
-### 2. Нештатные ситуации
-- **Разрядился ноутбук или телефон организатора:** откройте `/control` на любом другом телефоне, нажмите **«Открыть / Восстановить пульт по PIN»** и введите 4 цифры, которые видны в левом верхнем углу планшета на сцене. Подходить к сцене не нужно — управление перейдёт к новому телефону без сброса таймера.
-- **Мигнул интернет на площадке:** у планшета вверху точка станет красной, но таймер продолжит точно считать по внутренним часам; при возвращении сети планшет автоматически подтянет изменения с пульта.
+### 2. Troubleshooting During the Event
+- **Organizer's laptop/phone battery died:** Open `/control` on another phone, enter the 4-digit PIN displayed in the top-left corner of the stage tablet under **"Open or Restore Remote by PIN"**, and click **"Open / Restore"**. Control switches immediately with zero interruption on stage.
+- **Temporary Wi-Fi drop:** The status dot on `/stage` turns red while disconnected, but the timer keeps counting accurately using local monotonic offset and automatically re-syncs as soon as connectivity returns.

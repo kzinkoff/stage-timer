@@ -1,79 +1,77 @@
-# Спецификация Stage Timer для вайбкодинг-платформ
+# Stage Timer Specification for AI & Vibe-Coding Platforms
 
-Этот документ содержит готовое техническое задание (мастер-промпт), схему данных и API-контракт. Вы можете целиком скопировать промпт ниже и вставить его в **Lovable, Bolt.new, Replit Agent, v0, Base44, Cursor** или любую другую AI-платформу со встроенным облачным хостингом.
+This document provides a ready-to-use master prompt, room state schema, and API contract. You can copy and paste the prompt below directly into **Lovable, Bolt.new, Replit Agent, v0, Base44, Cursor**, or any AI app builder with built-in cloud hosting.
 
 ---
 
-## 1. Готовый Мастер-промпт (Copy & Paste)
+## 1. Ready-to-Use Master Prompt (Copy & Paste)
 
-Скопируйте текст ниже от начала до конца блока и отправьте его AI-агенту выбранной платформы:
+Copy the entire block below and paste it into your AI builder:
 
 ```text
-Создай веб-приложение "Stage Timer" (многозальный таймер обратного отсчёта для спикеров на сцене с удалённым пультом управления).
+Build a web application called "Stage Timer" — a multi-room speaker countdown timer with remote control from a phone or laptop.
 
-=== АРХИТЕКТУРА И МАРШРУТЫ ===
-Приложение имеет ровно два экрана без авторизации и без поля "имя спикера" и без фиксированных переключателей залов:
-1. /control — пульт управления организатора (адаптирован под экран смартфона).
-2. /stage — экран сцены для планшета перед спикером (на весь экран).
+=== ARCHITECTURE & ROUTES ===
+The app has exactly two screens, no user login/auth, no speaker name field, and no fixed room tabs:
+1. /control — organizer's remote control (mobile-first layout).
+2. /stage — fullscreen stage display for the tablet facing the speaker.
 
-Главная страница / перенаправляет на /control.
+Root / redirects to /control.
 
-=== ИЗОЛЯЦИЯ ЗАЛОВ ПО PIN И QR-КОДУ ===
-Любой организатор создаёт свою изолированную комнату (пульт), не пересекаясь с другими залами:
-1. Стартовый экран на /control (если в URL нет ?pin=XXXX):
-   - Кнопка "+ Создать новый пульт": создаёт на сервере комнату со случайным уникальным 4-значным PIN-кодом (1000–9999), обновляет URL на /control?pin=XXXX и сразу показывает карточку подключения планшета.
-   - Карточка "Открыть или восстановить пульт по PIN": ввод 4 цифр и кнопка "Открыть / Восстановить". Если комната с этим PIN уже существует — подключает пульт к ней (сохраняя текущее время и настройки). Если такой комнаты нет (например, сервер перезапускался, или у организатора сел ноутбук и он заходит с телефона, глядя на PIN на планшете) — создаёт новую комнату ровно с этим же 4-значным PIN.
-2. Карточка подключения планшета на /control (сворачивается/разворачивается кнопкой "Планшет (QR / PIN)"):
-   - Крупный 4-значный PIN-код.
-   - QR-код (SVG/PNG), в который зашита полная ссылка <origin>/stage?pin=XXXX.
-   - Прямая ссылка "Открыть экран сцены".
-3. Экран сцены /stage:
-   - Если открыт без ?pin=XXXX — показывает полноэкранную тёмную форму ввода PIN с крупной экранной цифровой клавиатурой (кнопки 0-9, ⌫, Подкл.) и поддержкой физической клавиатуры.
-   - Если открыт по QR-коду /stage?pin=XXXX — сразу переходит к экрану таймера.
-   - Если связь временно пропала или сервер перезагрузился — /stage НЕ должен сбрасываться на экран ввода PIN; он остаётся на экране таймера, показывает красную точку потери связи, автоматически переподключается к тому же PIN (сервер при переподключении SSE для валидного 4-значного PIN автоматически восстанавливает комнату) и подтягивает актуальное состояние.
+=== ROOM ISOLATION VIA 4-DIGIT PIN & QR CODE ===
+Each organizer creates an isolated room so halls/stages never interfere with one another:
+1. Start screen on /control (when ?pin=XXXX is not in the URL):
+   - Huge button "+ Create New Remote": creates a room on the server with a unique random 4-digit PIN (1000-9999), updates the URL to /control?pin=XXXX, and immediately opens the tablet pairing card.
+   - "Open or Restore Remote by PIN" card: 4-digit input + "Open / Restore" button. If a room with that PIN already exists, connect to it (preserving its running timer and settings). If it doesn't exist (e.g., server restarted or organizer's laptop died and they're switching to a phone using the PIN visible on the stage tablet), create a room with that exact 4-digit PIN.
+2. Tablet pairing card on /control (collapsible via a "Tablet (QR / PIN)" toggle button):
+   - Large 4-digit PIN display.
+   - Scannable QR code (SVG/PNG) encoding the full URL <origin>/stage?pin=XXXX.
+   - Direct link "Open Stage Screen".
+3. Stage screen /stage:
+   - If opened without ?pin=XXXX, show a dark fullscreen PIN entry card with a large touch-friendly on-screen numeric keypad (0-9, backspace, Connect) plus physical keyboard support.
+   - If opened via QR code /stage?pin=XXXX, open the timer immediately.
+   - If network drops or the server restarts, /stage MUST NOT kick back to the PIN entry screen: keep the timer screen visible with a red disconnected status dot and auto-reconnect to the same PIN (and let the SSE endpoint auto-create the room for any valid 4-digit PIN if missing).
 
-=== ТОЧНАЯ МАТЕМАТИКА ВРЕМЕНИ И СИНХРОНИЗАЦИЯ ===
-- Синхронизация между /control и /stage в реальном времени (SSE или WebSockets / Realtime) с задержкой < 1 сек.
-- Сервер НЕ шлёт каждую секунду тики. Таймер считается от целевого времени окончания endTimeMs (Unix timestamp ms).
-- В каждом пакете состояния сервер присылает serverNow (текущее серверное Date.now()). Клиенты вычисляют поправку часов: serverTimeOffset = serverNow - Date.now() и считают оставшееся время как endTimeMs - (Date.now() + serverTimeOffset).
-- Пока время > 0, секунды округляются вверх (Math.ceil(ms / 1000)). После перехода через 0 время уходит в минус (-00:01, -00:02...), секунды считаются через Math.floor(Math.abs(ms) / 1000).
+=== DRIFT-FREE TIME MATH & REAL-TIME SYNC ===
+- Real-time sync between /control and /stage (< 1s latency via SSE, WebSockets, or Realtime).
+- Do NOT broadcast per-second ticks over the network. Store a target endTimeMs (Unix timestamp ms) when running.
+- Include serverNow (Date.now() on server) in every state payload. Clients compute serverTimeOffset = serverNow - Date.now() and calculate remaining time locally at ~100ms intervals as endTimeMs - (Date.now() + serverTimeOffset).
+- While remaining > 0, round seconds up (Math.ceil(ms / 1000)). Past zero, switch to negative count (-00:01, -00:02...) using Math.floor(Math.abs(ms) / 1000).
 
-=== УПРАВЛЕНИЕ НА ПУЛЬТЕ (/control) ===
-1. Живое мини-превью экрана сцены (показывает те же цифры, статус, сообщение и цвета/чёрный фон, что и планшет на сцене).
-2. Кнопки управления: "▶ Старт", "⏸ Пауза", "↺ Сброс", "−1 мин", "+1 мин".
-3. Длительность выступления:
-   - Пресеты в сетке 3x2: 5 м, 10 м, 15 м, 20 м, 30 м, 45 м.
-   - Поле ввода своей длительности в минутах + кнопка "Задать".
-4. Настройки цветов и порогов:
-   - Переключатель режима экрана:
-     1) "Цветной фон" (blackBackground = false): фон закрашен цветом активной зоны, цифры белые.
-     2) "Чёрный экран (цветные буквы)" (blackBackground = true): фон всегда #000000, а цифры и надписи окрашиваются в цвет активной зоны.
-   - Порог "Желтеет за...": два числовых поля (минуты и секунды до 00:00, по умолчанию 5 м 0 с) + выбор цвета (по умолчанию #eab308).
-   - Порог "Краснеет за...": два числовых поля (минуты и секунды до 00:00, по умолчанию 1 м 0 с) + выбор цвета (по умолчанию #dc2626).
-   - Основной цвет (зелёная зона): выбор цвета (по умолчанию #16a34a).
-5. Сообщение спикеру на экран:
-   - Текстовое поле + быстрые шаблоны ("Ещё 2 минуты", "Переходи к вопросам", "Заканчивай, время вышло!").
-   - Кнопки "Показать" и "Убрать".
-   - ВАЖНО: Пока сообщение показано на сцене (showMessage === true), на пульте рядом с заголовком блока появляется плашка "НА ЭКРАНЕ" с мигающим красным кружком записи, а кнопка "Показать" подсвечивается красной рамкой и также отображает мигающий красный кружок.
+=== REMOTE CONTROL (/control) ===
+1. Live mini preview of the stage display (mirrors digits, status, active message, and colored/black background mode).
+2. Transport controls: "Start", "Pause", "Reset", "-1 min", "+1 min".
+3. Duration presets in a 3x2 grid: 5 m, 10 m, 15 m, 20 m, 30 m, 45 m + custom minutes input and "Set" button.
+4. Colors & threshold settings:
+   - Display mode switch:
+     1) "Colored Background" (blackBackground = false): full screen uses the active zone color, digits are white.
+     2) "Black Screen (Colored Digits)" (blackBackground = true): background stays #000000 while timer digits and status badge use the active zone color.
+   - "Turns Yellow at..." threshold (minutes + seconds inputs before 00:00, default 5m 0s) + color picker (default #eab308).
+   - "Turns Red at..." threshold (minutes + seconds inputs before 00:00, default 1m 0s) + color picker (default #dc2626).
+   - "Green Zone" color picker (default #16a34a).
+5. Message to Stage Screen:
+   - Text input + quick chips ("2 minutes left", "Move to Q&A", "Please wrap up, time's up!").
+   - "Show" and "Hide" buttons.
+   - IMPORTANT: While a message is actively displayed on stage (showMessage === true), show a pulsing red recording-style dot and "ON SCREEN" badge next to the section title, plus highlight the "Show" button with a red outline and pulsing red dot.
 
-=== ВЁРСТКА И ПОВЕДЕНИЕ ЭКРАНА СЦЕНЫ (/stage) ===
-1. Цифры таймера используют font-variant-numeric: tabular-nums (чтобы ширина не прыгала).
-2. Адаптивный размер элементов, чтобы читалось с 3–5+ метров:
-   - Обычный режим (нет сообщения и нет надписи ВРЕМЯ!/ПАУЗА): цифры 31vw (26vw при минусовом времени).
-   - Когда показана надпись "ПАУЗА" или "ВРЕМЯ!": надпись размером clamp(44px, 11.5vmin, 160px), цифры уменьшаются до 24vw (22vw при минусе).
-   - Когда показано сообщение от организатора: сообщение размещается в основном flex-потоке под цифрами (не перекрывает таймер!), шрифт сообщения очень крупный clamp(42px, 10.5vmin, 140px) (или clamp(32px, 8vmin, 100px) при длине > 35 символов) на контрастной плашке с толстой рамкой, а цифры таймера автоматически уменьшаются до min(17vw, 22vmin).
-3. Поведение после 00:00 (Overtime):
-   - В обоих режимах (и при цветном фоне, и при чёрном экране) при currentRemainingMs <= 0 и status === 'running' весь экран начинает мигать красным и тёмным фоном (анимация 1с), крупно горит "ВРЕМЯ!", и продолжается обратный отсчёт со знаком минус (-00:05).
-4. Защита от засыпания экрана:
-   - Использование Screen Wake Lock API (navigator.wakeLock.request('screen')), автозапрос при любом клике/касании экрана, при входе по PIN и при visibilitychange === 'visible'.
-   - В верхней панели мелкий индикатор связи (зелёная/красная точка), PIN, статус Wake Lock ("☀️ Экран не гаснет" / "👆 Нажмите на экран, чтобы не гас"), кнопка "Сменить PIN" и кнопка "На весь экран" (requestFullscreen()).
+=== STAGE SCREEN LAYOUT & BEHAVIOR (/stage) ===
+1. Digits use font-variant-numeric: tabular-nums so widths never jitter.
+2. Responsive typography readable from 3-5+ meters:
+   - Normal mode (no alert, no message): digits at 31vw (26vw when negative).
+   - When "PAUSED" or "TIME'S UP!" badge is shown: badge at clamp(44px, 11.5vmin, 160px), digits shrink to 24vw (22vw when negative).
+   - When an organizer message is shown: render the message box in normal flex flow below the timer (never overlapping digits!), automatically shrink timer digits to min(17vw, 22vmin), and render the message huge at clamp(42px, 10.5vmin, 140px) (or clamp(32px, 8vmin, 100px) when > 35 chars) inside a high-contrast bordered box.
+3. Overtime behavior after 00:00:
+   - In BOTH color modes (colored background and black screen), when remaining <= 0 and status === 'running', flash the entire screen red/dark (1s CSS animation), display "TIME'S UP!" prominently, and count negative overtime (-00:05).
+4. Screen Wake Lock:
+   - Use Screen Wake Lock API (navigator.wakeLock.request('screen')), auto-request on any click/touchstart, on PIN connect, and on visibilitychange === 'visible'.
+   - Top bar shows connection dot, PIN, Wake Lock status badge ("☀️ Screen Awake" / "👆 Tap screen to keep awake"), "Change PIN" button, and "Fullscreen" button (requestFullscreen()).
 ```
 
 ---
 
-## 2. Схема данных комнаты (`RoomState`)
+## 2. Room State JSON Schema (`RoomState`)
 
-Независимо от того, на каком стеке строится приложение (Node.js в памяти/JSON, Supabase, Firebase), каждая комната описывается одним объектом:
+Regardless of backend stack (in-memory Node.js + JSON file, Supabase, or Firebase), each room follows this model:
 
 ```json
 {
@@ -95,38 +93,38 @@
 }
 ```
 
-### Вычисляемые поля при отдаче клиентам
-- `remainingMs`: если `status === "running"` и `endTimeMs !== null`, то `endTimeMs - Date.now()`, иначе сохранённое `remainingMs`.
-- `serverNow`: текущее время сервера `Date.now()` для расчёта `serverTimeOffset` на клиенте.
+### Computed Fields Sent to Clients
+- `remainingMs`: when `status === "running"` and `endTimeMs !== null`, compute `endTimeMs - Date.now()`; otherwise return the stored `remainingMs`.
+- `serverNow`: current server `Date.now()` so clients can calculate `serverTimeOffset`.
 
 ---
 
-## 3. HTTP / SSE API-контракт (для Node.js / Express / Fastify бэкенда)
+## 3. HTTP / SSE API Contract (for Node.js / Express / Fastify Backends)
 
-| Метод и путь | Описание |
+| Endpoint | Behavior |
 | :--- | :--- |
-| `POST /api/create-room` | Тело `{ "pin": "5577" }` (опционально). Если `pin` не передан — генерирует новый уникальный 4-значный `pin`. Если `pin` передан — возвращает существующую комнату или создаёт новую ровно с этим `pin`. |
-| `GET /api/room-exists?pin=XXXX` | Проверяет наличие комнаты. Возвращает `200 { "ok": true, "pin": "XXXX" }` или `404`. |
-| `GET /api/qr?url=...` | Генерирует QR-код в SVG (`image/svg+xml`) для переданного URL. |
-| `GET /api/events?pin=XXXX` | SSE-поток (`text/event-stream`). При подключении сразу присылает JSON комнаты; для валидного 4-значного `pin` при отсутствии комнаты создаёт её автоматически. Keep-alive каждые 15 секунд. |
-| `POST /api/action` | Принимает `{ "pin": "XXXX", "action": "...", ... }`. Поддерживаемые `action`: `set_duration` (`seconds`), `start`, `pause`, `reset`, `adjust` (`deltaSec`), `message` (`message`, `show`), `settings` (`settings`). |
-| `GET /health` | Проверка работоспособности сервера (`200 { "ok": true, "rooms": N, "uptime": ... }`). |
+| `POST /api/create-room` | Optional body `{ "pin": "5577" }`. Without `pin`, creates a room with a unique random 4-digit `pin`. With a 4-digit `pin`, returns the existing room or creates a new one with that exact `pin`. |
+| `GET /api/room-exists?pin=XXXX` | Checks whether the room exists. Returns `200 { "ok": true, "pin": "XXXX" }` or `404`. |
+| `GET /api/qr?url=...` | Generates an SVG QR code (`image/svg+xml`) for the given URL. |
+| `GET /api/events?pin=XXXX` | SSE stream (`text/event-stream`). Sends current `RoomState` immediately on connect. Auto-creates the room for any valid 4-digit `pin` if missing. Keep-alive every 15 seconds. |
+| `POST /api/action` | Accepts `{ "pin": "XXXX", "action": "...", ... }`. Supported actions: `set_duration` (`seconds`), `start`, `pause`, `reset`, `adjust` (`deltaSec`), `message` (`message`, `show`), `settings` (`settings`). |
+| `GET /health` | Healthcheck returning `200 { "ok": true, "rooms": N, "uptime": ... }`. |
 
 ---
 
-## 4. Подсказки для конкретных вайбкодинг-платформ
+## 4. Platform-Specific Notes
 
-### Вариант A: Платформы с полноценным Node.js сервером (Replit, Bolt.new, Glitch)
-Вам даже не нужно ничего генерировать с нуля — вы можете просто импортировать этот GitHub-репозиторий (`server.js`, `package.json`, `public/control.html`, `public/stage.html`) и нажать **Run / Deploy**:
-- Стартовая команда: `npm start` (`node server.js`).
-- Порт: `process.env.PORT || 3000`.
-- При публикации платформа автоматически выдаст `https://`-адрес, на котором сразу заработает `Wake Lock API` на iPad и Android.
+### Option A: Node.js Platforms (Replit, Bolt.new, Glitch)
+You don't need to regenerate anything from scratch — simply import this GitHub repository (`server.js`, `package.json`, `public/control.html`, `public/stage.html`) and click **Run / Deploy**:
+- Start command: `npm start` (`node server.js`).
+- Port: `process.env.PORT || 3000`.
+- Published URLs automatically include `https://`, enabling `Wake Lock API` on iPad and Android.
 
-### Вариант B: Платформы React + BaaS без своего Node-сервера (Lovable, Base44, v0 + Supabase/Firebase)
-Если вы вставляете мастер-промпт в **Lovable** (где бэкендом выступает Supabase) или генерируете фронтенд на **v0 / Firebase Studio**, добавьте в конец мастер-промпта одну из следующих технических инструкций:
+### Option B: React + BaaS Platforms (Lovable, Base44, v0 + Supabase / Firebase)
+When pasting the master prompt into **Lovable** (Supabase backend) or **v0 / Firebase Studio**, append one of the following technical notes:
 
-**Для Lovable / Supabase:**
-> Используй Supabase для хранения и синхронизации комнат. Создай таблицу `rooms` с полями из JSON-схемы (`pin text primary key`, `status text`, `duration_sec int`, `remaining_ms bigint`, `end_time_ms bigint`, `message text`, `show_message boolean`, `settings jsonb`, `updated_at timestamptz`). Подпишись на изменения комнаты через Supabase Realtime (`postgres_changes` по фильтру `pin=eq.${pin}`) и дополнительно используй Supabase Broadcast-канал `room:${pin}` для мгновенного отклика. Для вычисления сдвига часов клиента используй `serverNow` через Postgres RPC-функцию `select extract(epoch from now()) * 1000`. QR-код генерируй библиотекой `qrcode.react`.
+**For Lovable / Supabase:**
+> Use Supabase for room persistence and real-time sync. Create a `rooms` table matching the JSON schema (`pin text primary key`, `status text`, `duration_sec int`, `remaining_ms bigint`, `end_time_ms bigint`, `message text`, `show_message boolean`, `settings jsonb`, `updated_at timestamptz`). Subscribe via Supabase Realtime (`postgres_changes` filtered by `pin=eq.${pin}`) and use a Supabase Broadcast channel `room:${pin}` for low-latency updates. Get `serverNow` via a Postgres RPC function `select extract(epoch from now()) * 1000`. Generate QR codes client-side using `qrcode.react`.
 
-**Для Firebase Realtime Database:**
-> Храни каждую комнату в Realtime Database по пути `rooms/${pin}`. Для синхронизации часов подпишись на системный узел `.info/serverTimeOffset` — Firebase вычисляет поправку автоматически. QR-код генерируй на клиенте с помощью пакета `qrcode` или `qrcode.react`.
+**For Firebase Realtime Database:**
+> Store each room at `rooms/${pin}`. Subscribe to `.info/serverTimeOffset` to automatically compute clock offset between client and server. Generate QR codes client-side with `qrcode` or `qrcode.react`.

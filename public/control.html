@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Пульт — Таймер сцены</title>
+  <title>Control — Stage Timer</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -37,7 +37,7 @@
       display: none !important;
     }
 
-    /* Стартовый экран (создание / вход по PIN) */
+    /* Start screen (create new remote or restore by PIN) */
     .start-screen {
       margin-top: 24px;
     }
@@ -93,7 +93,7 @@
       min-height: 18px;
     }
 
-    /* Хедер активного пульта */
+    /* Active remote header */
     .header {
       display: flex;
       justify-content: space-between;
@@ -137,7 +137,7 @@
       color: #93c5fd;
     }
 
-    /* Карточка подключения планшета (QR + PIN) */
+    /* Stage tablet pairing card (QR + PIN) */
     .qr-card {
       background: var(--card);
       border: 2px solid var(--primary);
@@ -196,7 +196,7 @@
       display: inline-block;
     }
 
-    /* Превью экрана сцены */
+    /* Live stage preview */
     .live-preview {
       border-radius: 16px;
       padding: 18px 16px;
@@ -242,7 +242,7 @@
       display: block;
     }
 
-    /* Карточки секций */
+    /* Section cards */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -260,7 +260,7 @@
       margin-bottom: 10px;
     }
 
-    /* Кнопки управления */
+    /* Timer controls */
     .controls-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -295,7 +295,7 @@
     .btn-reset { background: #475569; }
     .btn-adjust { background: #334155; font-size: 15px; padding: 12px; }
 
-    /* Пресеты времени */
+    /* Duration presets */
     .presets-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -338,7 +338,7 @@
       white-space: nowrap;
     }
 
-    /* Сообщение спикеру */
+    /* Speaker message */
     .msg-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -437,7 +437,7 @@
       display: inline-block;
     }
 
-    /* Настройки порогов и цветов */
+    /* Threshold & color settings */
     .mode-switch {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -541,118 +541,118 @@
 </head>
 <body>
 
-  <!-- Стартовый экран (создание своего пульта или вход по PIN) -->
+  <!-- Start screen (create or restore remote by PIN) -->
   <div id="startScreen" class="start-screen">
-    <h1 class="hero-title">Таймер сцены</h1>
+    <h1 class="hero-title">Stage Timer</h1>
     <p class="hero-subtitle">
-      Создайте свой пульт управления. Вы получите уникальный PIN-код и QR-код для планшета на сцене — никто другой не сможет вмешаться в ваш таймер.
+      Create your own remote control. You'll receive a unique 4-digit PIN and QR code for the stage tablet — nobody else can interfere with your timer.
     </p>
 
-    <button class="btn-create-huge" id="btnCreateRoom">+ Создать новый пульт</button>
+    <button class="btn-create-huge" id="btnCreateRoom">+ Create New Remote</button>
 
     <div id="resumeBox" class="card hidden" style="text-align: center;">
-      <div class="card-title">Недавний пульт</div>
+      <div class="card-title">Recent Remote</div>
       <button class="btn-secondary" id="btnResumeLast" style="width: 100%; padding: 12px;">
-        Вернуться в пульт <span id="resumePinText"></span>
+        Resume Remote <span id="resumePinText"></span>
       </button>
     </div>
 
-    <div class="divider">или открыть / восстановить по PIN</div>
+    <div class="divider">or open / restore by PIN</div>
 
     <div class="card">
-      <div class="card-title">Открыть или восстановить пульт по PIN</div>
+      <div class="card-title">Open or Restore Remote by PIN</div>
       <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.4;">
-        Введите PIN вашего планшета — подключится к активному пульту или создаст пульт с этим же номером.
+        Enter the PIN shown on your stage tablet — connects to an active remote or recreates one with the exact same number.
       </p>
       <div class="join-row">
-        <input type="text" id="joinPinInput" placeholder="4-значный PIN" maxlength="4" inputmode="numeric" />
-        <button class="btn-secondary" id="btnJoinRoom">Открыть / Восстановить</button>
+        <input type="text" id="joinPinInput" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" />
+        <button class="btn-secondary" id="btnJoinRoom">Open / Restore</button>
       </div>
       <div class="error-text" id="joinError"></div>
     </div>
   </div>
 
-  <!-- Основной интерфейс активного пульта -->
+  <!-- Active remote interface -->
   <div id="controlScreen" class="hidden">
     <div class="header">
       <div class="header-left">
         <span class="pin-badge" id="pinBadge">PIN: ----</span>
-        <button class="btn-small" id="btnToggleQr">📱 Планшет (QR / PIN)</button>
+        <button class="btn-small" id="btnToggleQr">📱 Tablet (QR / PIN)</button>
       </div>
-      <button class="btn-small" id="btnSwitchRoom">Сменить / Новый пульт</button>
+      <button class="btn-small" id="btnSwitchRoom">Switch / New Remote</button>
     </div>
 
-    <!-- Карточка подключения планшета (QR + PIN) -->
+    <!-- Tablet pairing card (QR + PIN) -->
     <div class="qr-card hidden" id="qrCard">
-      <div class="card-title" style="margin-bottom: 2px;">Подключение планшета сцены</div>
-      <div style="font-size: 13px; color: var(--muted);">PIN-код этого пульта:</div>
+      <div class="card-title" style="margin-bottom: 2px;">Stage Tablet Connection</div>
+      <div style="font-size: 13px; color: var(--muted);">Room PIN:</div>
       <div class="qr-pin-big" id="qrPinBig">----</div>
 
       <div class="qr-wrapper">
-        <img id="qrImg" alt="QR-код для планшета" src="" />
+        <img id="qrImg" alt="QR code for stage tablet" src="" />
       </div>
 
       <div class="qr-hint" id="qrUrlHint"></div>
 
       <div class="qr-actions">
-        <a class="stage-link" id="openStageLink" href="/stage" target="_blank">Открыть экран сцены ↗</a>
-        <button class="btn-small" id="btnHideQr">Скрыть QR</button>
+        <a class="stage-link" id="openStageLink" href="/stage" target="_blank">Open Stage Screen ↗</a>
+        <button class="btn-small" id="btnHideQr">Hide QR</button>
       </div>
     </div>
 
-    <!-- Превью того, что сейчас на сцене -->
+    <!-- Live preview of stage display -->
     <div class="live-preview" id="livePreview">
       <div class="preview-top">
-        <span id="previewPinLabel">ПУЛЬТ ----</span>
-        <span id="previewStatus">ГОТОВ</span>
+        <span id="previewPinLabel">REMOTE ----</span>
+        <span id="previewStatus">READY</span>
       </div>
       <div class="preview-time" id="previewTime">15:00</div>
       <div class="preview-msg" id="previewMsg"></div>
     </div>
 
-    <!-- Управление таймером -->
+    <!-- Timer controls -->
     <div class="card">
-      <div class="card-title">Управление</div>
+      <div class="card-title">Controls</div>
       <div class="controls-grid">
-        <button class="btn-start" id="btnStart">▶ Старт</button>
-        <button class="btn-pause" id="btnPause">⏸ Пауза</button>
-        <button class="btn-reset" id="btnReset">↺ Сброс</button>
+        <button class="btn-start" id="btnStart">▶ Start</button>
+        <button class="btn-pause" id="btnPause">⏸ Pause</button>
+        <button class="btn-reset" id="btnReset">↺ Reset</button>
       </div>
       <div class="adjust-grid">
-        <button class="btn-adjust" id="btnMinus1">−1 мин</button>
-        <button class="btn-adjust" id="btnPlus1">+1 мин</button>
+        <button class="btn-adjust" id="btnMinus1">−1 min</button>
+        <button class="btn-adjust" id="btnPlus1">+1 min</button>
       </div>
     </div>
 
-    <!-- Выбор длительности -->
+    <!-- Duration selection -->
     <div class="card">
-      <div class="card-title">Длительность выступления</div>
+      <div class="card-title">Duration</div>
       <div class="presets-grid">
-        <button class="btn-preset" data-min="5">5 м</button>
-        <button class="btn-preset" data-min="10">10 м</button>
-        <button class="btn-preset" data-min="15">15 м</button>
-        <button class="btn-preset" data-min="20">20 м</button>
-        <button class="btn-preset" data-min="30">30 м</button>
-        <button class="btn-preset" data-min="45">45 м</button>
+        <button class="btn-preset" data-min="5">5 m</button>
+        <button class="btn-preset" data-min="10">10 m</button>
+        <button class="btn-preset" data-min="15">15 m</button>
+        <button class="btn-preset" data-min="20">20 m</button>
+        <button class="btn-preset" data-min="30">30 m</button>
+        <button class="btn-preset" data-min="45">45 m</button>
       </div>
       <div class="custom-row">
-        <input type="number" id="customMinInput" placeholder="Своё время (мин, напр. 25)" min="1" max="600" step="1" />
-        <button class="btn-secondary" id="btnSetCustom">Задать</button>
+        <input type="number" id="customMinInput" placeholder="Custom minutes (e.g. 25)" min="1" max="600" step="1" />
+        <button class="btn-secondary" id="btnSetCustom">Set</button>
       </div>
     </div>
 
-    <!-- Настройки порогов и цветов -->
+    <!-- Thresholds and colors -->
     <div class="card">
-      <div class="card-title">Цвета и пороги обратного отсчёта</div>
+      <div class="card-title">Colors &amp; Countdown Thresholds</div>
       <div class="mode-switch">
-        <button type="button" class="mode-btn active" id="modeColorBg" data-black="false">Цветной фон</button>
-        <button type="button" class="mode-btn" id="modeBlackBg" data-black="true">Чёрный экран (цветные буквы)</button>
+        <button type="button" class="mode-btn active" id="modeColorBg" data-black="false">Colored Background</button>
+        <button type="button" class="mode-btn" id="modeBlackBg" data-black="true">Black Screen (Colored Digits)</button>
       </div>
       <div class="settings-grid">
         <div class="setting-row">
           <div class="setting-label">
-            Зелёная зона
-            <span class="setting-sub">Основной цвет до жёлтого порога</span>
+            Green Zone
+            <span class="setting-sub">Default color before yellow threshold</span>
           </div>
           <div class="setting-controls">
             <input type="color" id="greenColorInput" value="#16a34a" />
@@ -661,13 +661,13 @@
 
         <div class="setting-row">
           <div class="setting-label">
-            Желтеет за...
-            <span class="setting-sub">За сколько до 00:00</span>
+            Turns Yellow at...
+            <span class="setting-sub">Time left before 00:00</span>
           </div>
           <div class="setting-controls">
             <div class="time-mini">
-              <input type="number" id="yellowMinInput" min="0" max="300" value="5" />м
-              <input type="number" id="yellowSecInput" min="0" max="59" value="0" />с
+              <input type="number" id="yellowMinInput" min="0" max="300" value="5" />m
+              <input type="number" id="yellowSecInput" min="0" max="59" value="0" />s
             </div>
             <input type="color" id="yellowColorInput" value="#eab308" />
           </div>
@@ -675,39 +675,39 @@
 
         <div class="setting-row">
           <div class="setting-label">
-            Краснеет за...
-            <span class="setting-sub">За сколько до 00:00</span>
+            Turns Red at...
+            <span class="setting-sub">Time left before 00:00</span>
           </div>
           <div class="setting-controls">
             <div class="time-mini">
-              <input type="number" id="redMinInput" min="0" max="300" value="1" />м
-              <input type="number" id="redSecInput" min="0" max="59" value="0" />с
+              <input type="number" id="redMinInput" min="0" max="300" value="1" />m
+              <input type="number" id="redSecInput" min="0" max="59" value="0" />s
             </div>
             <input type="color" id="redColorInput" value="#dc2626" />
           </div>
         </div>
       </div>
-      <button class="btn-secondary" id="btnSaveSettings" style="width: 100%; margin-top: 10px;">Применить пороги и цвета</button>
+      <button class="btn-secondary" id="btnSaveSettings" style="width: 100%; margin-top: 10px;">Apply Thresholds &amp; Colors</button>
     </div>
 
-    <!-- Сообщение на экран сцены -->
+    <!-- Message to stage screen -->
     <div class="card">
       <div class="card-title-row">
-        <div class="card-title">Сообщение спикеру на экран</div>
+        <div class="card-title">Message to Stage Screen</div>
         <span class="msg-live-badge" id="msgLiveBadge">
           <span class="rec-dot"></span>
-          НА ЭКРАНЕ
+          ON SCREEN
         </span>
       </div>
-      <input type="text" id="msgInput" placeholder="Например: Переходи к вопросам" maxlength="120" />
+      <input type="text" id="msgInput" placeholder="e.g. Move to Q&A" maxlength="120" />
       <div class="quick-chips">
-        <span class="chip" data-text="Ещё 2 минуты">Ещё 2 минуты</span>
-        <span class="chip" data-text="Переходи к вопросам">Переходи к вопросам</span>
-        <span class="chip" data-text="Заканчивай, время вышло!">Время вышло!</span>
+        <span class="chip" data-text="2 minutes left">2 minutes left</span>
+        <span class="chip" data-text="Move to Q&A">Move to Q&amp;A</span>
+        <span class="chip" data-text="Please wrap up, time's up!">Time's up!</span>
       </div>
       <div class="msg-actions">
-        <button class="btn-secondary btn-show-msg" id="btnShowMsg"><span class="rec-dot"></span>Показать</button>
-        <button class="btn-reset" id="btnHideMsg">Убрать</button>
+        <button class="btn-secondary btn-show-msg" id="btnShowMsg"><span class="rec-dot"></span>Show</button>
+        <button class="btn-reset" id="btnHideMsg">Hide</button>
       </div>
     </div>
   </div>
@@ -788,7 +788,7 @@
 
       qrPinBig.textContent = pin;
       qrImg.src = `/api/qr?url=${encodeURIComponent(stageUrl)}`;
-      qrUrlHint.textContent = `Ссылка для планшета: ${stageUrl}`;
+      qrUrlHint.textContent = `Stage link: ${stageUrl}`;
       openStageLink.href = `/stage?pin=${encodeURIComponent(pin)}`;
     }
 
@@ -827,7 +827,7 @@
       activePin = null;
       settingsInitialized = false;
       history.replaceState(null, '', '/control');
-      document.title = 'Пульт — Таймер сцены';
+      document.title = 'Control — Stage Timer';
       controlScreen.classList.add('hidden');
       startScreen.classList.remove('hidden');
       joinError.textContent = errorMsg;
@@ -859,9 +859,9 @@
       localStorage.setItem('last_control_pin', pin);
       history.replaceState(null, '', `/control?pin=${encodeURIComponent(pin)}`);
 
-      document.title = `Пульт ${pin} — Таймер`;
+      document.title = `Remote ${pin} — Stage Timer`;
       pinBadge.textContent = `PIN: ${pin}`;
-      previewPinLabel.textContent = `ПУЛЬТ ${pin}`;
+      previewPinLabel.textContent = `REMOTE ${pin}`;
 
       startScreen.classList.add('hidden');
       controlScreen.classList.remove('hidden');
@@ -881,7 +881,7 @@
         try {
           const data = JSON.parse(event.data);
           if (data.error === 'not_found') {
-            showStartScreen(`Пульт ${pin} не найден (возможно, сервер был перезапущен). Создайте новый.`);
+            showStartScreen(`Remote ${pin} not found (server may have restarted). Create or restore it.`);
             return;
           }
           if (typeof data.serverNow === 'number') {
@@ -903,7 +903,7 @@
       };
 
       eventSource.onerror = () => {
-        previewStatus.textContent = 'НЕТ СВЯЗИ...';
+        previewStatus.textContent = 'DISCONNECTED...';
       };
     }
 
@@ -919,9 +919,9 @@
       previewTime.textContent = formatTime(currentRemainingMs);
 
       const statusMap = {
-        idle: 'ГОТОВ',
-        running: currentRemainingMs <= 0 ? 'ВРЕМЯ ВЫШЛО!' : 'ИДЁТ ОТСЧЁТ',
-        paused: 'ПАУЗА'
+        idle: 'READY',
+        running: currentRemainingMs <= 0 ? "TIME'S UP!" : 'RUNNING',
+        paused: 'PAUSED'
       };
       previewStatus.textContent = statusMap[roomState.status] || '';
 
@@ -937,7 +937,6 @@
       }
 
       if (currentRemainingMs <= 0 && roomState.status === 'running') {
-        // На сцене мигает красным фоном
         livePreview.style.backgroundColor = s.redColor || '#dc2626';
         livePreview.style.borderColor = '#ffffff';
         livePreview.style.color = '#ffffff';
@@ -986,31 +985,31 @@
           })
         });
         if (res.status === 404) {
-          showStartScreen('Пульт не найден на сервере.');
+          showStartScreen('Remote not found on server.');
         }
       } catch (err) {
-        console.error('Ошибка отправки команды:', err);
+        console.error('Failed to send action:', err);
       }
     }
 
-    // Создание нового пульта
+    // Create a new remote with random PIN
     document.getElementById('btnCreateRoom').addEventListener('click', async () => {
       try {
         const res = await fetch('/api/create-room', { method: 'POST' });
-        if (!res.ok) throw new Error('Ошибка сервера');
+        if (!res.ok) throw new Error('Server error');
         const room = await res.json();
         roomState = room;
         openControlForPin(room.pin, true, room.lanOrigin);
       } catch (err) {
-        joinError.textContent = 'Не удалось создать пульт. Проверьте соединение.';
+        joinError.textContent = 'Failed to create remote. Check connection.';
       }
     });
 
-    // Открытие существующего пульта или восстановление с заданным PIN
+    // Open existing remote or restore with specified PIN
     async function joinByPin(pin) {
       const clean = String(pin || '').trim();
       if (!/^\d{4}$/.test(clean)) {
-        joinError.textContent = 'Введите 4 цифры PIN-кода';
+        joinError.textContent = 'Enter a 4-digit PIN code';
         return;
       }
       try {
@@ -1025,10 +1024,10 @@
           roomState = data;
           openControlForPin(data.pin, false, data.lanOrigin);
         } else {
-          joinError.textContent = data.error || 'Не удалось открыть пульт';
+          joinError.textContent = data.error || 'Failed to open remote';
         }
       } catch (e) {
-        joinError.textContent = 'Ошибка соединения с сервером';
+        joinError.textContent = 'Server connection error';
       }
     }
 
@@ -1044,7 +1043,7 @@
       if (lastPin) joinByPin(lastPin);
     });
 
-    // Переключение видимости QR-карточки и выход на стартовый экран
+    // Toggle QR card visibility and switch remote
     btnToggleQr.addEventListener('click', () => {
       setQrVisible(qrCard.classList.contains('hidden'));
     });
@@ -1055,7 +1054,7 @@
       showStartScreen('');
     });
 
-    // Кнопки управления таймером
+    // Timer action buttons
     document.getElementById('btnStart').addEventListener('click', () => sendAction('start'));
     document.getElementById('btnPause').addEventListener('click', () => sendAction('pause'));
     document.getElementById('btnReset').addEventListener('click', () => sendAction('reset'));
@@ -1076,7 +1075,7 @@
       }
     });
 
-    // Сохранение порогов и цветов
+    // Save threshold and color settings
     function saveSettings() {
       const yMin = Math.max(0, parseInt(yellowMinInput.value, 10) || 0);
       const ySec = Math.max(0, Math.min(59, parseInt(yellowSecInput.value, 10) || 0));
@@ -1109,7 +1108,7 @@
     yellowColorInput.addEventListener('change', saveSettings);
     redColorInput.addEventListener('change', saveSettings);
 
-    // Сообщения на экран
+    // Stage messages
     const msgInput = document.getElementById('msgInput');
     document.querySelectorAll('.chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -1126,7 +1125,7 @@
       sendAction('message', { message: msgInput.value, show: false });
     });
 
-    // Инициализация при загрузке
+    // Initialize on load
     (async function init() {
       const params = new URLSearchParams(window.location.search);
       const urlPin = (params.get('pin') || '').trim();
@@ -1137,7 +1136,7 @@
       }
 
       if (urlPin) {
-        showStartScreen('PIN в ссылке должен состоять из 4 цифр.');
+        showStartScreen('PIN in URL must be 4 digits.');
         return;
       }
 

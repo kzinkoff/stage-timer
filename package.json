@@ -1,7 +1,7 @@
 {
   "name": "stage-timer",
   "version": "1.0.0",
-  "description": "Многозальный таймер обратного отсчёта для сцены с удалённым пультом управления по PIN и QR-коду",
+  "description": "Multi-room countdown stage timer with remote control via PIN and QR code",
   "main": "server.js",
   "engines": {
     "node": ">=18.0.0"

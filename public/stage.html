@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Сцена — Таймер</title>
+  <title>Stage — Timer</title>
   <style>
     * {
       box-sizing: border-box;
@@ -27,7 +27,7 @@
       display: none !important;
     }
 
-    /* Экран ввода PIN (Режим 1) */
+    /* Mode 1: PIN entry screen */
     .pin-screen {
       width: 100%;
       height: 100%;
@@ -128,7 +128,7 @@
       font-size: 16px;
     }
 
-    /* Экран сцены (Режим 2) */
+    /* Mode 2: Stage timer screen */
     .stage-container {
       width: 100%;
       height: 100%;
@@ -141,7 +141,7 @@
       gap: 1.5vh;
     }
 
-    /* Верхняя панель */
+    /* Top bar */
     .top-bar {
       position: absolute;
       top: 1.5vh;
@@ -213,7 +213,7 @@
       background: rgba(0, 0, 0, 0.55);
     }
 
-    /* Надпись "ВРЕМЯ!" или "ПАУЗА" */
+    /* "TIME'S UP!" or "PAUSED" badge */
     .alert-badge {
       display: none;
       font-size: clamp(44px, 11.5vmin, 160px);
@@ -229,7 +229,7 @@
       display: block;
     }
 
-    /* Огромные цифры обратного отсчёта */
+    /* Large countdown digits */
     .timer-display {
       font-size: 31vw;
       font-weight: 900;
@@ -246,7 +246,7 @@
       font-size: 26vw;
     }
 
-    /* Когда показан алерт ВРЕМЯ! или ПАУЗА */
+    /* When TIME'S UP! or PAUSED alert is visible */
     .stage-container.has-alert .timer-display {
       font-size: 24vw;
     }
@@ -255,7 +255,7 @@
       font-size: 22vw;
     }
 
-    /* Когда показано сообщение — уменьшаем цифры времени и отдаём экран тексту */
+    /* When speaker message is visible — shrink timer digits and give room to text */
     .stage-container.has-message .alert-badge {
       font-size: clamp(32px, 7vmin, 96px);
     }
@@ -268,7 +268,7 @@
       font-size: min(15vw, 20vmin);
     }
 
-    /* Сообщение от организатора (крупно, в потоке под таймером) */
+    /* Organizer message (large, in flow below timer) */
     .message-box {
       display: none;
       width: 100%;
@@ -295,7 +295,7 @@
       font-size: clamp(32px, 8vmin, 100px);
     }
 
-    /* Мигание при выходе за 0 */
+    /* Flashing red after reaching 00:00 */
     @keyframes flashRed {
       0%, 100% {
         background-color: var(--red-color, #dc2626);
@@ -319,11 +319,11 @@
 </head>
 <body>
 
-  <!-- Режим 1: Ввод PIN-кода -->
+  <!-- Mode 1: PIN entry -->
   <div class="pin-screen" id="pinScreen">
     <div class="pin-card">
-      <h1>Подключение планшета сцены</h1>
-      <p>Введите 4-значный PIN с пульта организатора или отсканируйте QR-код</p>
+      <h1>Stage Tablet Connection</h1>
+      <p>Enter the 4-digit PIN from the organizer's remote or scan the QR code</p>
 
       <div class="pin-display" id="pinDisplay">
         <div class="pin-digit"></div>
@@ -346,22 +346,22 @@
         <button class="key-btn" data-key="9">9</button>
         <button class="key-btn action-del" id="btnBackspace">⌫</button>
         <button class="key-btn" data-key="0">0</button>
-        <button class="key-btn action-ok" id="btnConnectPin">Подкл.</button>
+        <button class="key-btn action-ok" id="btnConnectPin">Connect</button>
       </div>
     </div>
   </div>
 
-  <!-- Режим 2: Экран таймера сцены -->
+  <!-- Mode 2: Stage timer display -->
   <div class="stage-container hidden" id="stageContainer">
     <div class="top-bar">
       <div class="top-left">
         <span class="status-dot" id="connDot"></span>
         <span id="pinLabel">PIN: ----</span>
-        <span class="wake-badge" id="wakeStatus">👆 Нажмите на экран, чтобы не гас</span>
+        <span class="wake-badge" id="wakeStatus">👆 Tap screen to keep awake</span>
       </div>
       <div class="top-right" id="topControls">
-        <button class="top-btn" id="btnChangePin">Сменить PIN</button>
-        <button class="top-btn" id="fsBtn">На весь экран</button>
+        <button class="top-btn" id="btnChangePin">Change PIN</button>
+        <button class="top-btn" id="fsBtn">Fullscreen</button>
       </div>
     </div>
 
@@ -408,19 +408,19 @@
       }
     };
 
-    // Wake Lock API — чтобы экран планшета не гас
+    // Wake Lock API to keep tablet screen from sleeping
     let wakeLock = null;
     function updateWakeBadge(isActive, unsupported = false) {
       if (unsupported) {
-        wakeStatus.textContent = '⚠️ Отключите автоблокировку в настройках планшета';
+        wakeStatus.textContent = '⚠️ Disable auto-lock in tablet settings';
         wakeStatus.classList.remove('active');
         return;
       }
       if (isActive) {
-        wakeStatus.textContent = '☀️ Экран не гаснет';
+        wakeStatus.textContent = '☀️ Screen Awake';
         wakeStatus.classList.add('active');
       } else {
-        wakeStatus.textContent = '👆 Нажмите на экран, чтобы не гас';
+        wakeStatus.textContent = '👆 Tap screen to keep awake';
         wakeStatus.classList.remove('active');
       }
     }
@@ -452,7 +452,7 @@
       }
     });
 
-    // Авто-запрос Wake Lock при любом касании/клике экрана сцены
+    // Auto-request Wake Lock on any touch or click on the stage screen
     ['click', 'touchstart'].forEach(evt => {
       document.addEventListener(evt, () => {
         if (activePin && (!wakeLock || wakeLock.released)) {
@@ -477,7 +477,7 @@
       activePin = null;
       document.body.classList.remove('overtime-flash');
       document.body.style.backgroundColor = '#0f172a';
-      document.title = 'Сцена — Подключение';
+      document.title = 'Stage — Connect';
       stageContainer.classList.add('hidden');
       pinScreen.classList.remove('hidden');
       pinError.textContent = errorMsg;
@@ -487,7 +487,7 @@
     async function tryConnectWithPin(pin) {
       const clean = String(pin || '').trim();
       if (!/^\d{4}$/.test(clean)) {
-        pinError.textContent = 'Введите 4 цифры PIN-кода';
+        pinError.textContent = 'Enter a 4-digit PIN code';
         return;
       }
 
@@ -495,14 +495,14 @@
         const res = await fetch(`/api/room-exists?pin=${encodeURIComponent(clean)}`);
         const data = await res.json();
         if (!res.ok || !data.ok) {
-          pinError.textContent = data.error || 'Пульт с таким PIN не найден';
+          pinError.textContent = data.error || 'Room with this PIN was not found';
           return;
         }
 
         pinError.textContent = '';
         activePin = clean;
         history.replaceState(null, '', `/stage?pin=${encodeURIComponent(clean)}`);
-        document.title = `Сцена — PIN ${clean}`;
+        document.title = `Stage — PIN ${clean}`;
         pinLabel.textContent = `PIN: ${clean}`;
 
         pinScreen.classList.add('hidden');
@@ -511,11 +511,11 @@
         requestWakeLock();
         connectSSE(clean);
       } catch (err) {
-        pinError.textContent = 'Ошибка соединения с сервером';
+        pinError.textContent = 'Server connection error';
       }
     }
 
-    // Экранная клавиатура
+    // On-screen keypad
     document.querySelectorAll('.key-btn[data-key]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (enteredPin.length < 4) {
@@ -536,7 +536,7 @@
       tryConnectWithPin(enteredPin);
     });
 
-    // Поддержка физической клавиатуры на экране ввода PIN
+    // Physical keyboard support on PIN entry screen
     document.addEventListener('keydown', (e) => {
       if (!pinScreen.classList.contains('hidden')) {
         if (/^\d$/.test(e.key) && enteredPin.length < 4) {
@@ -602,15 +602,15 @@
         timerDisplay.style.color = '';
         alertBadge.style.color = '';
         timerDisplay.classList.add('overtime');
-        alertText = 'ВРЕМЯ!';
+        alertText = "TIME'S UP!";
       } else {
         document.body.classList.remove('overtime-flash');
         timerDisplay.classList.toggle('overtime', currentRemainingMs < 0);
 
         if (roomState.status === 'paused') {
-          alertText = 'ПАУЗА';
+          alertText = 'PAUSED';
         } else if (currentRemainingMs <= 0) {
-          alertText = 'ВРЕМЯ!';
+          alertText = "TIME'S UP!";
         }
 
         let zoneColor = greenColor;
@@ -671,7 +671,7 @@
           roomState = data;
           renderFrame();
         } catch (err) {
-          console.error('Ошибка парсинга состояния:', err);
+          console.error('Failed to parse room state:', err);
         }
       };
 
@@ -680,7 +680,7 @@
       };
     }
 
-    // Полноэкранный режим
+    // Fullscreen toggle
     function toggleFullscreen() {
       requestWakeLock();
       if (!document.fullscreenElement) {
@@ -696,7 +696,7 @@
     });
     stageContainer.addEventListener('dblclick', toggleFullscreen);
 
-    // Инициализация при открытии (проверка ?pin=XXXX из QR-кода или URL)
+    // Initialize on load (check ?pin=XXXX from QR code or URL)
     (function init() {
       const params = new URLSearchParams(window.location.search);
       const urlPin = (params.get('pin') || '').trim();
