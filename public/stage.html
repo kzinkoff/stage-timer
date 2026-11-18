@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Сцена — Таймер</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0f172a;
+      color: #ffffff;
+      transition: background-color 0.4s ease;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Экран ввода PIN (Режим 1) */
+    .pin-screen {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background-color: #0f172a;
+    }
+
+    .pin-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .pin-card h1 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .pin-card p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+    }
+
+    .pin-display {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .pin-digit {
+      width: 54px;
+      height: 64px;
+      border-radius: 12px;
+      background: #0f172a;
+      border: 2px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 900;
+      color: #f8fafc;
+    }
+
+    .pin-digit.filled {
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+
+    .pin-error {
+      color: #f87171;
+      font-size: 13px;
+      min-height: 20px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .key-btn {
+      background: #334155;
+      color: #ffffff;
+      border: none;
+      border-radius: 12px;
+      padding: 16px 0;
+      font-size: 24px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .key-btn:active {
+      background: #475569;
+      transform: scale(0.96);
+    }
+
+    .key-btn.action-del {
+      background: #475569;
+      font-size: 20px;
+    }
+
+    .key-btn.action-ok {
+      background: #2563eb;
+      font-size: 16px;
+    }
+
+    /* Экран сцены (Режим 2) */
+    .stage-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      padding: 6vh 2vw 2.5vh;
+      gap: 1.5vh;
+    }
+
+    /* Верхняя панель */
+    .top-bar {
+      position: absolute;
+      top: 1.5vh;
+      left: 2vw;
+      right: 2vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: clamp(12px, 1.8vmin, 22px);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      z-index: 5;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0.85;
+      flex-wrap: wrap;
+    }
+
+    .wake-badge {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: clamp(11px, 1.5vmin, 16px);
+      font-weight: 600;
+    }
+
+    .wake-badge.active {
+      border-color: rgba(74, 222, 128, 0.6);
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: #4ade80;
+    }
+
+    .status-dot.offline {
+      background-color: #ef4444;
+      box-shadow: 0 0 8px #fff;
+    }
+
+    .top-btn {
+      background: rgba(0, 0, 0, 0.35);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: clamp(12px, 1.7vmin, 18px);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .top-btn:hover {
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    /* Надпись "ВРЕМЯ!" или "ПАУЗА" */
+    .alert-badge {
+      display: none;
+      font-size: clamp(44px, 11.5vmin, 160px);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
+      text-align: center;
+      text-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    }
+
+    .stage-container.has-alert .alert-badge {
+      display: block;
+    }
+
+    /* Огромные цифры обратного отсчёта */
+    .timer-display {
+      font-size: 31vw;
+      font-weight: 900;
+      line-height: 0.92;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.02em;
+      text-align: center;
+      text-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+      transition: font-size 0.25s ease, color 0.3s ease;
+    }
+
+    .timer-display.overtime {
+      font-size: 26vw;
+    }
+
+    /* Когда показан алерт ВРЕМЯ! или ПАУЗА */
+    .stage-container.has-alert .timer-display {
+      font-size: 24vw;
+    }
+
+    .stage-container.has-alert .timer-display.overtime {
+      font-size: 22vw;
+    }
+
+    /* Когда показано сообщение — уменьшаем цифры времени и отдаём экран тексту */
+    .stage-container.has-message .alert-badge {
+      font-size: clamp(32px, 7vmin, 96px);
+    }
+
+    .stage-container.has-message .timer-display {
+      font-size: min(17vw, 22vmin);
+    }
+
+    .stage-container.has-message .timer-display.overtime {
+      font-size: min(15vw, 20vmin);
+    }
+
+    /* Сообщение от организатора (крупно, в потоке под таймером) */
+    .message-box {
+      display: none;
+      width: 100%;
+      max-width: 96vw;
+      background: rgba(0, 0, 0, 0.85);
+      color: #fde047;
+      border: 4px solid rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      padding: 2.5vh 3vw;
+      text-align: center;
+      font-size: clamp(42px, 10.5vmin, 140px);
+      font-weight: 900;
+      line-height: 1.15;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .message-box.visible {
+      display: block;
+    }
+
+    .message-box.long-message {
+      font-size: clamp(32px, 8vmin, 100px);
+    }
+
+    /* Мигание при выходе за 0 */
+    @keyframes flashRed {
+      0%, 100% {
+        background-color: var(--red-color, #dc2626);
+        color: #ffffff;
+      }
+      50% {
+        background-color: #111111;
+        color: #ff4d4d;
+      }
+    }
+
+    body.overtime-flash {
+      animation: flashRed 1s infinite;
+    }
+
+    body.overtime-flash .timer-display,
+    body.overtime-flash .alert-badge {
+      color: inherit !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Режим 1: Ввод PIN-кода -->
+  <div class="pin-screen" id="pinScreen">
+    <div class="pin-card">
+      <h1>Подключение планшета сцены</h1>
+      <p>Введите 4-значный PIN с пульта организатора или отсканируйте QR-код</p>
+
+      <div class="pin-display" id="pinDisplay">
+        <div class="pin-digit"></div>
+        <div class="pin-digit"></div>
+        <div class="pin-digit"></div>
+        <div class="pin-digit"></div>
+      </div>
+
+      <div class="pin-error" id="pinError"></div>
+
+      <div class="keypad">
+        <button class="key-btn" data-key="1">1</button>
+        <button class="key-btn" data-key="2">2</button>
+        <button class="key-btn" data-key="3">3</button>
+        <button class="key-btn" data-key="4">4</button>
+        <button class="key-btn" data-key="5">5</button>
+        <button class="key-btn" data-key="6">6</button>
+        <button class="key-btn" data-key="7">7</button>
+        <button class="key-btn" data-key="8">8</button>
+        <button class="key-btn" data-key="9">9</button>
+        <button class="key-btn action-del" id="btnBackspace">⌫</button>
+        <button class="key-btn" data-key="0">0</button>
+        <button class="key-btn action-ok" id="btnConnectPin">Подкл.</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Режим 2: Экран таймера сцены -->
+  <div class="stage-container hidden" id="stageContainer">
+    <div class="top-bar">
+      <div class="top-left">
+        <span class="status-dot" id="connDot"></span>
+        <span id="pinLabel">PIN: ----</span>
+        <span class="wake-badge" id="wakeStatus">👆 Нажмите на экран, чтобы не гас</span>
+      </div>
+      <div class="top-right" id="topControls">
+        <button class="top-btn" id="btnChangePin">Сменить PIN</button>
+        <button class="top-btn" id="fsBtn">На весь экран</button>
+      </div>
+    </div>
+
+    <div class="alert-badge" id="alertBadge"></div>
+    <div class="timer-display" id="timerDisplay">15:00</div>
+
+    <div class="message-box" id="messageBox"></div>
+  </div>
+
+  <script>
+    const pinScreen = document.getElementById('pinScreen');
+    const stageContainer = document.getElementById('stageContainer');
+    const pinDigits = document.querySelectorAll('#pinDisplay .pin-digit');
+    const pinError = document.getElementById('pinError');
+
+    const pinLabel = document.getElementById('pinLabel');
+    const wakeStatus = document.getElementById('wakeStatus');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const alertBadge = document.getElementById('alertBadge');
+    const messageBox = document.getElementById('messageBox');
+    const connDot = document.getElementById('connDot');
+    const fsBtn = document.getElementById('fsBtn');
+    const topControls = document.getElementById('topControls');
+
+    let enteredPin = '';
+    let activePin = null;
+    let eventSource = null;
+    let serverTimeOffset = 0;
+
+    let roomState = {
+      status: 'idle',
+      durationSec: 900,
+      remainingMs: 900000,
+      endTimeMs: null,
+      message: '',
+      showMessage: false,
+      settings: {
+        blackBackground: false,
+        yellowThresholdSec: 300,
+        redThresholdSec: 60,
+        greenColor: '#16a34a',
+        yellowColor: '#eab308',
+        redColor: '#dc2626'
+      }
+    };
+
+    // Wake Lock API — чтобы экран планшета не гас
+    let wakeLock = null;
+    function updateWakeBadge(isActive, unsupported = false) {
+      if (unsupported) {
+        wakeStatus.textContent = '⚠️ Отключите автоблокировку в настройках планшета';
+        wakeStatus.classList.remove('active');
+        return;
+      }
+      if (isActive) {
+        wakeStatus.textContent = '☀️ Экран не гаснет';
+        wakeStatus.classList.add('active');
+      } else {
+        wakeStatus.textContent = '👆 Нажмите на экран, чтобы не гас';
+        wakeStatus.classList.remove('active');
+      }
+    }
+
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) {
+        updateWakeBadge(false, true);
+        return;
+      }
+      if (wakeLock && !wakeLock.released) {
+        updateWakeBadge(true);
+        return;
+      }
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        updateWakeBadge(true);
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+          updateWakeBadge(false);
+        });
+      } catch (e) {
+        updateWakeBadge(false);
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && activePin) {
+        requestWakeLock();
+      }
+    });
+
+    // Авто-запрос Wake Lock при любом касании/клике экрана сцены
+    ['click', 'touchstart'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        if (activePin && (!wakeLock || wakeLock.released)) {
+          requestWakeLock();
+        }
+      }, { passive: true });
+    });
+
+    function updatePinBoxes() {
+      pinDigits.forEach((el, idx) => {
+        const ch = enteredPin[idx] || '';
+        el.textContent = ch;
+        el.classList.toggle('filled', Boolean(ch));
+      });
+    }
+
+    function showPinScreen(errorMsg = '') {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      activePin = null;
+      document.body.classList.remove('overtime-flash');
+      document.body.style.backgroundColor = '#0f172a';
+      document.title = 'Сцена — Подключение';
+      stageContainer.classList.add('hidden');
+      pinScreen.classList.remove('hidden');
+      pinError.textContent = errorMsg;
+      history.replaceState(null, '', '/stage');
+    }
+
+    async function tryConnectWithPin(pin) {
+      const clean = String(pin || '').trim();
+      if (!/^\d{4}$/.test(clean)) {
+        pinError.textContent = 'Введите 4 цифры PIN-кода';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/room-exists?pin=${encodeURIComponent(clean)}`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          pinError.textContent = data.error || 'Пульт с таким PIN не найден';
+          return;
+        }
+
+        pinError.textContent = '';
+        activePin = clean;
+        history.replaceState(null, '', `/stage?pin=${encodeURIComponent(clean)}`);
+        document.title = `Сцена — PIN ${clean}`;
+        pinLabel.textContent = `PIN: ${clean}`;
+
+        pinScreen.classList.add('hidden');
+        stageContainer.classList.remove('hidden');
+
+        requestWakeLock();
+        connectSSE(clean);
+      } catch (err) {
+        pinError.textContent = 'Ошибка соединения с сервером';
+      }
+    }
+
+    // Экранная клавиатура
+    document.querySelectorAll('.key-btn[data-key]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (enteredPin.length < 4) {
+          enteredPin += btn.dataset.key;
+          pinError.textContent = '';
+          updatePinBoxes();
+        }
+      });
+    });
+
+    document.getElementById('btnBackspace').addEventListener('click', () => {
+      enteredPin = enteredPin.slice(0, -1);
+      pinError.textContent = '';
+      updatePinBoxes();
+    });
+
+    document.getElementById('btnConnectPin').addEventListener('click', () => {
+      tryConnectWithPin(enteredPin);
+    });
+
+    // Поддержка физической клавиатуры на экране ввода PIN
+    document.addEventListener('keydown', (e) => {
+      if (!pinScreen.classList.contains('hidden')) {
+        if (/^\d$/.test(e.key) && enteredPin.length < 4) {
+          enteredPin += e.key;
+          pinError.textContent = '';
+          updatePinBoxes();
+        } else if (e.key === 'Backspace') {
+          enteredPin = enteredPin.slice(0, -1);
+          pinError.textContent = '';
+          updatePinBoxes();
+        } else if (e.key === 'Enter') {
+          tryConnectWithPin(enteredPin);
+        }
+      }
+    });
+
+    document.getElementById('btnChangePin').addEventListener('click', () => {
+      enteredPin = '';
+      updatePinBoxes();
+      showPinScreen('');
+    });
+
+    function formatTime(ms) {
+      const isNegative = ms < 0;
+      const totalSeconds = isNegative
+        ? Math.floor(Math.abs(ms) / 1000)
+        : Math.ceil(ms / 1000);
+
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(seconds).padStart(2, '0');
+      return isNegative ? `-${mm}:${ss}` : `${mm}:${ss}`;
+    }
+
+    function renderFrame() {
+      if (!activePin) return;
+
+      const now = Date.now() + serverTimeOffset;
+      let currentRemainingMs = roomState.remainingMs;
+
+      if (roomState.status === 'running' && roomState.endTimeMs !== null) {
+        currentRemainingMs = roomState.endTimeMs - now;
+      }
+
+      timerDisplay.textContent = formatTime(currentRemainingMs);
+
+      const s = roomState.settings || {};
+      const greenColor = s.greenColor || '#16a34a';
+      const yellowColor = s.yellowColor || '#eab308';
+      const redColor = s.redColor || '#dc2626';
+      const yellowMs = (Number(s.yellowThresholdSec) || 0) * 1000;
+      const redMs = (Number(s.redThresholdSec) || 0) * 1000;
+      const isBlackBg = Boolean(s.blackBackground);
+
+      document.documentElement.style.setProperty('--red-color', redColor);
+
+      let alertText = '';
+      if (currentRemainingMs <= 0 && roomState.status === 'running') {
+        document.body.classList.add('overtime-flash');
+        document.body.style.backgroundColor = '';
+        timerDisplay.style.color = '';
+        alertBadge.style.color = '';
+        timerDisplay.classList.add('overtime');
+        alertText = 'ВРЕМЯ!';
+      } else {
+        document.body.classList.remove('overtime-flash');
+        timerDisplay.classList.toggle('overtime', currentRemainingMs < 0);
+
+        if (roomState.status === 'paused') {
+          alertText = 'ПАУЗА';
+        } else if (currentRemainingMs <= 0) {
+          alertText = 'ВРЕМЯ!';
+        }
+
+        let zoneColor = greenColor;
+        if (currentRemainingMs <= redMs) {
+          zoneColor = redColor;
+        } else if (currentRemainingMs <= yellowMs) {
+          zoneColor = yellowColor;
+        }
+
+        if (isBlackBg) {
+          document.body.style.backgroundColor = '#000000';
+          timerDisplay.style.color = zoneColor;
+          alertBadge.style.color = zoneColor;
+        } else {
+          document.body.style.backgroundColor = zoneColor;
+          timerDisplay.style.color = '#ffffff';
+          alertBadge.style.color = '#ffffff';
+        }
+      }
+
+      alertBadge.textContent = alertText;
+      stageContainer.classList.toggle('has-alert', Boolean(alertText));
+
+      const hasMessage = Boolean(roomState.showMessage && roomState.message);
+      stageContainer.classList.toggle('has-message', hasMessage);
+      if (hasMessage) {
+        messageBox.textContent = roomState.message;
+        messageBox.classList.toggle('long-message', roomState.message.length > 35);
+        messageBox.classList.add('visible');
+      } else {
+        messageBox.classList.remove('visible');
+      }
+    }
+
+    setInterval(renderFrame, 100);
+
+    function connectSSE(pin) {
+      if (eventSource) {
+        eventSource.close();
+      }
+      eventSource = new EventSource(`/api/events?pin=${encodeURIComponent(pin)}`);
+
+      eventSource.onopen = () => {
+        connDot.classList.remove('offline');
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.error === 'not_found') {
+            connDot.classList.add('offline');
+            return;
+          }
+          connDot.classList.remove('offline');
+          if (typeof data.serverNow === 'number') {
+            serverTimeOffset = data.serverNow - Date.now();
+          }
+          roomState = data;
+          renderFrame();
+        } catch (err) {
+          console.error('Ошибка парсинга состояния:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        connDot.classList.add('offline');
+      };
+    }
+
+    // Полноэкранный режим
+    function toggleFullscreen() {
+      requestWakeLock();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    fsBtn.addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', () => {
+      topControls.style.display = document.fullscreenElement ? 'none' : 'flex';
+    });
+    stageContainer.addEventListener('dblclick', toggleFullscreen);
+
+    // Инициализация при открытии (проверка ?pin=XXXX из QR-кода или URL)
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+      const urlPin = (params.get('pin') || '').trim();
+      if (urlPin) {
+        enteredPin = urlPin.slice(0, 4);
+        updatePinBoxes();
+        tryConnectWithPin(urlPin);
+      } else {
+        showPinScreen('');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+services:
+  stage-timer:
+    build: .
+    container_name: stage-timer
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000

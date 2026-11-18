@@ -1,0 +1,19 @@
+{
+  "name": "stage-timer",
+  "version": "1.0.0",
+  "description": "Многозальный таймер обратного отсчёта для сцены с удалённым пультом управления по PIN и QR-коду",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

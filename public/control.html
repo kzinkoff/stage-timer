@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Пульт — Таймер сцены</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 12px;
+      max-width: 540px;
+      margin: 0 auto;
+      padding-bottom: 40px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Стартовый экран (создание / вход по PIN) */
+    .start-screen {
+      margin-top: 24px;
+    }
+
+    .hero-title {
+      font-size: 26px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .hero-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.4;
+    }
+
+    .btn-create-huge {
+      width: 100%;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 18px 20px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+      margin-bottom: 16px;
+    }
+
+    .divider {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 14px 0;
+    }
+
+    .join-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .error-text {
+      color: #f87171;
+      font-size: 13px;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* Хедер активного пульта */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pin-badge {
+      background: #1d4ed8;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.06em;
+    }
+
+    .btn-small {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 11px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-small.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--primary);
+      color: #93c5fd;
+    }
+
+    /* Карточка подключения планшета (QR + PIN) */
+    .qr-card {
+      background: var(--card);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .qr-pin-big {
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      color: #93c5fd;
+      margin: 6px 0 12px;
+      padding-left: 0.2em;
+    }
+
+    .qr-wrapper {
+      background: #ffffff;
+      display: inline-block;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    .qr-wrapper img {
+      display: block;
+      width: 200px;
+      height: 200px;
+    }
+
+    .qr-hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+
+    .qr-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stage-link {
+      color: #ffffff;
+      background: var(--primary);
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 9px 14px;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    /* Превью экрана сцены */
+    .live-preview {
+      border-radius: 16px;
+      padding: 18px 16px;
+      text-align: center;
+      margin-bottom: 14px;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+      background-color: #16a34a;
+      border: 3px solid transparent;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+
+    .preview-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 4px;
+    }
+
+    .preview-time {
+      font-size: 64px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .preview-msg {
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fde047;
+      padding: 6px 10px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .preview-msg.active {
+      display: block;
+    }
+
+    /* Карточки секций */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    /* Кнопки управления */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .adjust-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 14px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.08s ease, opacity 0.15s;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .btn-start { background: var(--success); }
+    .btn-pause { background: var(--warning); }
+    .btn-reset { background: #475569; }
+    .btn-adjust { background: #334155; font-size: 15px; padding: 12px; }
+
+    /* Пресеты времени */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn-preset {
+      background: #334155;
+      padding: 11px 4px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .btn-preset.selected {
+      outline: 2px solid #60a5fa;
+      background: #1d4ed8;
+    }
+
+    .custom-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 11px 12px;
+      border-radius: 10px;
+      font-size: 15px;
+      width: 100%;
+    }
+
+    .btn-secondary {
+      background: var(--primary);
+      padding: 11px 16px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    /* Сообщение спикеру */
+    .msg-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .quick-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .chip {
+      background: #334155;
+      color: #cbd5e1;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .card-title-row .card-title {
+      margin-bottom: 0;
+    }
+
+    .msg-live-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(220, 38, 38, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.65);
+      color: #fca5a5;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+
+    .msg-live-badge.active {
+      display: inline-flex;
+    }
+
+    .rec-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      display: inline-block;
+      animation: recPulse 1s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+
+    @keyframes recPulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 8px #ef4444;
+      }
+      50% {
+        opacity: 0.25;
+        transform: scale(0.8);
+        box-shadow: none;
+      }
+    }
+
+    .btn-show-msg {
+      background: #ca8a04;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-show-msg .rec-dot {
+      display: none;
+    }
+
+    .btn-show-msg.is-live {
+      background: #b45309;
+      outline: 2px solid #ef4444;
+    }
+
+    .btn-show-msg.is-live .rec-dot {
+      display: inline-block;
+    }
+
+    /* Настройки порогов и цветов */
+    .mode-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+      background: #0f172a;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .mode-btn {
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      border: none;
+    }
+
+    .mode-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.5);
+      padding: 10px 12px;
+      border-radius: 10px;
+      flex-wrap: wrap;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .setting-sub {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: 2px;
+    }
+
+    .setting-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .time-mini {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .time-mini input[type="number"] {
+      width: 56px;
+      text-align: center;
+      padding: 7px 4px;
+      font-size: 14px;
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: 2px solid rgba(255,255,255,0.3);
+      width: 38px;
+      height: 36px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Стартовый экран (создание своего пульта или вход по PIN) -->
+  <div id="startScreen" class="start-screen">
+    <h1 class="hero-title">Таймер сцены</h1>
+    <p class="hero-subtitle">
+      Создайте свой пульт управления. Вы получите уникальный PIN-код и QR-код для планшета на сцене — никто другой не сможет вмешаться в ваш таймер.
+    </p>
+
+    <button class="btn-create-huge" id="btnCreateRoom">+ Создать новый пульт</button>
+
+    <div id="resumeBox" class="card hidden" style="text-align: center;">
+      <div class="card-title">Недавний пульт</div>
+      <button class="btn-secondary" id="btnResumeLast" style="width: 100%; padding: 12px;">
+        Вернуться в пульт <span id="resumePinText"></span>
+      </button>
+    </div>
+
+    <div class="divider">или открыть / восстановить по PIN</div>
+
+    <div class="card">
+      <div class="card-title">Открыть или восстановить пульт по PIN</div>
+      <p style="font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.4;">
+        Введите PIN вашего планшета — подключится к активному пульту или создаст пульт с этим же номером.
+      </p>
+      <div class="join-row">
+        <input type="text" id="joinPinInput" placeholder="4-значный PIN" maxlength="4" inputmode="numeric" />
+        <button class="btn-secondary" id="btnJoinRoom">Открыть / Восстановить</button>
+      </div>
+      <div class="error-text" id="joinError"></div>
+    </div>
+  </div>
+
+  <!-- Основной интерфейс активного пульта -->
+  <div id="controlScreen" class="hidden">
+    <div class="header">
+      <div class="header-left">
+        <span class="pin-badge" id="pinBadge">PIN: ----</span>
+        <button class="btn-small" id="btnToggleQr">📱 Планшет (QR / PIN)</button>
+      </div>
+      <button class="btn-small" id="btnSwitchRoom">Сменить / Новый пульт</button>
+    </div>
+
+    <!-- Карточка подключения планшета (QR + PIN) -->
+    <div class="qr-card hidden" id="qrCard">
+      <div class="card-title" style="margin-bottom: 2px;">Подключение планшета сцены</div>
+      <div style="font-size: 13px; color: var(--muted);">PIN-код этого пульта:</div>
+      <div class="qr-pin-big" id="qrPinBig">----</div>
+
+      <div class="qr-wrapper">
+        <img id="qrImg" alt="QR-код для планшета" src="" />
+      </div>
+
+      <div class="qr-hint" id="qrUrlHint"></div>
+
+      <div class="qr-actions">
+        <a class="stage-link" id="openStageLink" href="/stage" target="_blank">Открыть экран сцены ↗</a>
+        <button class="btn-small" id="btnHideQr">Скрыть QR</button>
+      </div>
+    </div>
+
+    <!-- Превью того, что сейчас на сцене -->
+    <div class="live-preview" id="livePreview">
+      <div class="preview-top">
+        <span id="previewPinLabel">ПУЛЬТ ----</span>
+        <span id="previewStatus">ГОТОВ</span>
+      </div>
+      <div class="preview-time" id="previewTime">15:00</div>
+      <div class="preview-msg" id="previewMsg"></div>
+    </div>
+
+    <!-- Управление таймером -->
+    <div class="card">
+      <div class="card-title">Управление</div>
+      <div class="controls-grid">
+        <button class="btn-start" id="btnStart">▶ Старт</button>
+        <button class="btn-pause" id="btnPause">⏸ Пауза</button>
+        <button class="btn-reset" id="btnReset">↺ Сброс</button>
+      </div>
+      <div class="adjust-grid">
+        <button class="btn-adjust" id="btnMinus1">−1 мин</button>
+        <button class="btn-adjust" id="btnPlus1">+1 мин</button>
+      </div>
+    </div>
+
+    <!-- Выбор длительности -->
+    <div class="card">
+      <div class="card-title">Длительность выступления</div>
+      <div class="presets-grid">
+        <button class="btn-preset" data-min="5">5 м</button>
+        <button class="btn-preset" data-min="10">10 м</button>
+        <button class="btn-preset" data-min="15">15 м</button>
+        <button class="btn-preset" data-min="20">20 м</button>
+        <button class="btn-preset" data-min="30">30 м</button>
+        <button class="btn-preset" data-min="45">45 м</button>
+      </div>
+      <div class="custom-row">
+        <input type="number" id="customMinInput" placeholder="Своё время (мин, напр. 25)" min="1" max="600" step="1" />
+        <button class="btn-secondary" id="btnSetCustom">Задать</button>
+      </div>
+    </div>
+
+    <!-- Настройки порогов и цветов -->
+    <div class="card">
+      <div class="card-title">Цвета и пороги обратного отсчёта</div>
+      <div class="mode-switch">
+        <button type="button" class="mode-btn active" id="modeColorBg" data-black="false">Цветной фон</button>
+        <button type="button" class="mode-btn" id="modeBlackBg" data-black="true">Чёрный экран (цветные буквы)</button>
+      </div>
+      <div class="settings-grid">
+        <div class="setting-row">
+          <div class="setting-label">
+            Зелёная зона
+            <span class="setting-sub">Основной цвет до жёлтого порога</span>
+          </div>
+          <div class="setting-controls">
+            <input type="color" id="greenColorInput" value="#16a34a" />
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label">
+            Желтеет за...
+            <span class="setting-sub">За сколько до 00:00</span>
+          </div>
+          <div class="setting-controls">
+            <div class="time-mini">
+              <input type="number" id="yellowMinInput" min="0" max="300" value="5" />м
+              <input type="number" id="yellowSecInput" min="0" max="59" value="0" />с
+            </div>
+            <input type="color" id="yellowColorInput" value="#eab308" />
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label">
+            Краснеет за...
+            <span class="setting-sub">За сколько до 00:00</span>
+          </div>
+          <div class="setting-controls">
+            <div class="time-mini">
+              <input type="number" id="redMinInput" min="0" max="300" value="1" />м
+              <input type="number" id="redSecInput" min="0" max="59" value="0" />с
+            </div>
+            <input type="color" id="redColorInput" value="#dc2626" />
+          </div>
+        </div>
+      </div>
+      <button class="btn-secondary" id="btnSaveSettings" style="width: 100%; margin-top: 10px;">Применить пороги и цвета</button>
+    </div>
+
+    <!-- Сообщение на экран сцены -->
+    <div class="card">
+      <div class="card-title-row">
+        <div class="card-title">Сообщение спикеру на экран</div>
+        <span class="msg-live-badge" id="msgLiveBadge">
+          <span class="rec-dot"></span>
+          НА ЭКРАНЕ
+        </span>
+      </div>
+      <input type="text" id="msgInput" placeholder="Например: Переходи к вопросам" maxlength="120" />
+      <div class="quick-chips">
+        <span class="chip" data-text="Ещё 2 минуты">Ещё 2 минуты</span>
+        <span class="chip" data-text="Переходи к вопросам">Переходи к вопросам</span>
+        <span class="chip" data-text="Заканчивай, время вышло!">Время вышло!</span>
+      </div>
+      <div class="msg-actions">
+        <button class="btn-secondary btn-show-msg" id="btnShowMsg"><span class="rec-dot"></span>Показать</button>
+        <button class="btn-reset" id="btnHideMsg">Убрать</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const startScreen = document.getElementById('startScreen');
+    const controlScreen = document.getElementById('controlScreen');
+    const joinPinInput = document.getElementById('joinPinInput');
+    const joinError = document.getElementById('joinError');
+    const resumeBox = document.getElementById('resumeBox');
+    const resumePinText = document.getElementById('resumePinText');
+
+    const pinBadge = document.getElementById('pinBadge');
+    const qrCard = document.getElementById('qrCard');
+    const qrPinBig = document.getElementById('qrPinBig');
+    const qrImg = document.getElementById('qrImg');
+    const qrUrlHint = document.getElementById('qrUrlHint');
+    const openStageLink = document.getElementById('openStageLink');
+    const btnToggleQr = document.getElementById('btnToggleQr');
+
+    const previewPinLabel = document.getElementById('previewPinLabel');
+    const previewTime = document.getElementById('previewTime');
+    const previewStatus = document.getElementById('previewStatus');
+    const previewMsg = document.getElementById('previewMsg');
+    const livePreview = document.getElementById('livePreview');
+
+    const greenColorInput = document.getElementById('greenColorInput');
+    const yellowColorInput = document.getElementById('yellowColorInput');
+    const redColorInput = document.getElementById('redColorInput');
+    const yellowMinInput = document.getElementById('yellowMinInput');
+    const yellowSecInput = document.getElementById('yellowSecInput');
+    const redMinInput = document.getElementById('redMinInput');
+    const redSecInput = document.getElementById('redSecInput');
+    const modeColorBg = document.getElementById('modeColorBg');
+    const modeBlackBg = document.getElementById('modeBlackBg');
+
+    let selectedBlackBg = false;
+    let activePin = null;
+    let eventSource = null;
+    let serverTimeOffset = 0;
+    let settingsInitialized = false;
+    let roomState = {
+      status: 'idle',
+      durationSec: 900,
+      remainingMs: 900000,
+      endTimeMs: null,
+      message: '',
+      showMessage: false,
+      lanOrigin: null,
+      settings: {
+        blackBackground: false,
+        yellowThresholdSec: 300,
+        redThresholdSec: 60,
+        greenColor: '#16a34a',
+        yellowColor: '#eab308',
+        redColor: '#dc2626'
+      }
+    };
+
+    function formatTime(ms) {
+      const isNegative = ms < 0;
+      const totalSeconds = isNegative
+        ? Math.floor(Math.abs(ms) / 1000)
+        : Math.ceil(ms / 1000);
+
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(seconds).padStart(2, '0');
+      return isNegative ? `-${mm}:${ss}` : `${mm}:${ss}`;
+    }
+
+    function updateQrBlock(pin, lanOrigin) {
+      const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      const baseOrigin = (isLocalhost && lanOrigin) ? lanOrigin : window.location.origin;
+      const stageUrl = `${baseOrigin}/stage?pin=${encodeURIComponent(pin)}`;
+
+      qrPinBig.textContent = pin;
+      qrImg.src = `/api/qr?url=${encodeURIComponent(stageUrl)}`;
+      qrUrlHint.textContent = `Ссылка для планшета: ${stageUrl}`;
+      openStageLink.href = `/stage?pin=${encodeURIComponent(pin)}`;
+    }
+
+    function setQrVisible(visible) {
+      qrCard.classList.toggle('hidden', !visible);
+      btnToggleQr.classList.toggle('active', visible);
+    }
+
+    function updateModeButtons(isBlack) {
+      selectedBlackBg = Boolean(isBlack);
+      modeColorBg.classList.toggle('active', !selectedBlackBg);
+      modeBlackBg.classList.toggle('active', selectedBlackBg);
+    }
+
+    function syncSettingsInputs(s) {
+      if (!s) return;
+      updateModeButtons(Boolean(s.blackBackground));
+      greenColorInput.value = s.greenColor || '#16a34a';
+      yellowColorInput.value = s.yellowColor || '#eab308';
+      redColorInput.value = s.redColor || '#dc2626';
+
+      const yTotal = Math.max(0, Math.round(s.yellowThresholdSec || 0));
+      yellowMinInput.value = Math.floor(yTotal / 60);
+      yellowSecInput.value = yTotal % 60;
+
+      const rTotal = Math.max(0, Math.round(s.redThresholdSec || 0));
+      redMinInput.value = Math.floor(rTotal / 60);
+      redSecInput.value = rTotal % 60;
+    }
+
+    function showStartScreen(errorMsg = '') {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      activePin = null;
+      settingsInitialized = false;
+      history.replaceState(null, '', '/control');
+      document.title = 'Пульт — Таймер сцены';
+      controlScreen.classList.add('hidden');
+      startScreen.classList.remove('hidden');
+      joinError.textContent = errorMsg;
+      checkLastPinAvailability();
+    }
+
+    async function checkLastPinAvailability() {
+      const lastPin = localStorage.getItem('last_control_pin');
+      if (!lastPin) {
+        resumeBox.classList.add('hidden');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/room-exists?pin=${encodeURIComponent(lastPin)}`);
+        if (res.ok) {
+          resumePinText.textContent = `(${lastPin})`;
+          resumeBox.classList.remove('hidden');
+        } else {
+          resumeBox.classList.add('hidden');
+        }
+      } catch (e) {
+        resumeBox.classList.add('hidden');
+      }
+    }
+
+    function openControlForPin(pin, showQrByDefault = false, initialLanOrigin = null) {
+      activePin = pin;
+      settingsInitialized = false;
+      localStorage.setItem('last_control_pin', pin);
+      history.replaceState(null, '', `/control?pin=${encodeURIComponent(pin)}`);
+
+      document.title = `Пульт ${pin} — Таймер`;
+      pinBadge.textContent = `PIN: ${pin}`;
+      previewPinLabel.textContent = `ПУЛЬТ ${pin}`;
+
+      startScreen.classList.add('hidden');
+      controlScreen.classList.remove('hidden');
+
+      updateQrBlock(pin, initialLanOrigin);
+      setQrVisible(showQrByDefault);
+      connectSSE(pin);
+    }
+
+    function connectSSE(pin) {
+      if (eventSource) {
+        eventSource.close();
+      }
+      eventSource = new EventSource(`/api/events?pin=${encodeURIComponent(pin)}`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.error === 'not_found') {
+            showStartScreen(`Пульт ${pin} не найден (возможно, сервер был перезапущен). Создайте новый.`);
+            return;
+          }
+          if (typeof data.serverNow === 'number') {
+            serverTimeOffset = data.serverNow - Date.now();
+          }
+          const prevLan = roomState.lanOrigin;
+          roomState = data;
+          if (data.lanOrigin && data.lanOrigin !== prevLan) {
+            updateQrBlock(pin, data.lanOrigin);
+          }
+          if (!settingsInitialized && data.settings) {
+            syncSettingsInputs(data.settings);
+            settingsInitialized = true;
+          }
+          renderPreview();
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        previewStatus.textContent = 'НЕТ СВЯЗИ...';
+      };
+    }
+
+    function renderPreview() {
+      if (!activePin) return;
+      const now = Date.now() + serverTimeOffset;
+      let currentRemainingMs = roomState.remainingMs;
+
+      if (roomState.status === 'running' && roomState.endTimeMs !== null) {
+        currentRemainingMs = roomState.endTimeMs - now;
+      }
+
+      previewTime.textContent = formatTime(currentRemainingMs);
+
+      const statusMap = {
+        idle: 'ГОТОВ',
+        running: currentRemainingMs <= 0 ? 'ВРЕМЯ ВЫШЛО!' : 'ИДЁТ ОТСЧЁТ',
+        paused: 'ПАУЗА'
+      };
+      previewStatus.textContent = statusMap[roomState.status] || '';
+
+      const s = roomState.settings || {};
+      const yellowMs = (Number(s.yellowThresholdSec) || 0) * 1000;
+      const redMs = (Number(s.redThresholdSec) || 0) * 1000;
+
+      let zoneColor = s.greenColor || '#16a34a';
+      if (currentRemainingMs <= redMs) {
+        zoneColor = s.redColor || '#dc2626';
+      } else if (currentRemainingMs <= yellowMs) {
+        zoneColor = s.yellowColor || '#eab308';
+      }
+
+      if (currentRemainingMs <= 0 && roomState.status === 'running') {
+        // На сцене мигает красным фоном
+        livePreview.style.backgroundColor = s.redColor || '#dc2626';
+        livePreview.style.borderColor = '#ffffff';
+        livePreview.style.color = '#ffffff';
+      } else if (s.blackBackground) {
+        livePreview.style.backgroundColor = '#000000';
+        livePreview.style.borderColor = zoneColor;
+        livePreview.style.color = zoneColor;
+      } else {
+        livePreview.style.backgroundColor = zoneColor;
+        livePreview.style.borderColor = 'transparent';
+        livePreview.style.color = '#ffffff';
+      }
+
+      const isMsgActive = Boolean(roomState.showMessage && roomState.message);
+      const msgLiveBadge = document.getElementById('msgLiveBadge');
+      const btnShowMsg = document.getElementById('btnShowMsg');
+      if (isMsgActive) {
+        previewMsg.textContent = `💬 ${roomState.message}`;
+        previewMsg.classList.add('active');
+        msgLiveBadge.classList.add('active');
+        btnShowMsg.classList.add('is-live');
+      } else {
+        previewMsg.classList.remove('active');
+        msgLiveBadge.classList.remove('active');
+        btnShowMsg.classList.remove('is-live');
+      }
+
+      const currentMin = Math.round(roomState.durationSec / 60);
+      document.querySelectorAll('.btn-preset').forEach(btn => {
+        btn.classList.toggle('selected', Number(btn.dataset.min) === currentMin);
+      });
+    }
+
+    setInterval(renderPreview, 100);
+
+    async function sendAction(action, payload = {}) {
+      if (!activePin) return;
+      try {
+        const res = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pin: activePin,
+            action,
+            ...payload
+          })
+        });
+        if (res.status === 404) {
+          showStartScreen('Пульт не найден на сервере.');
+        }
+      } catch (err) {
+        console.error('Ошибка отправки команды:', err);
+      }
+    }
+
+    // Создание нового пульта
+    document.getElementById('btnCreateRoom').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/create-room', { method: 'POST' });
+        if (!res.ok) throw new Error('Ошибка сервера');
+        const room = await res.json();
+        roomState = room;
+        openControlForPin(room.pin, true, room.lanOrigin);
+      } catch (err) {
+        joinError.textContent = 'Не удалось создать пульт. Проверьте соединение.';
+      }
+    });
+
+    // Открытие существующего пульта или восстановление с заданным PIN
+    async function joinByPin(pin) {
+      const clean = String(pin || '').trim();
+      if (!/^\d{4}$/.test(clean)) {
+        joinError.textContent = 'Введите 4 цифры PIN-кода';
+        return;
+      }
+      try {
+        const res = await fetch('/api/create-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: clean })
+        });
+        const data = await res.json();
+        if (res.ok && data.pin) {
+          joinError.textContent = '';
+          roomState = data;
+          openControlForPin(data.pin, false, data.lanOrigin);
+        } else {
+          joinError.textContent = data.error || 'Не удалось открыть пульт';
+        }
+      } catch (e) {
+        joinError.textContent = 'Ошибка соединения с сервером';
+      }
+    }
+
+    document.getElementById('btnJoinRoom').addEventListener('click', () => {
+      joinByPin(joinPinInput.value);
+    });
+    joinPinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') joinByPin(joinPinInput.value);
+    });
+
+    document.getElementById('btnResumeLast').addEventListener('click', () => {
+      const lastPin = localStorage.getItem('last_control_pin');
+      if (lastPin) joinByPin(lastPin);
+    });
+
+    // Переключение видимости QR-карточки и выход на стартовый экран
+    btnToggleQr.addEventListener('click', () => {
+      setQrVisible(qrCard.classList.contains('hidden'));
+    });
+    document.getElementById('btnHideQr').addEventListener('click', () => {
+      setQrVisible(false);
+    });
+    document.getElementById('btnSwitchRoom').addEventListener('click', () => {
+      showStartScreen('');
+    });
+
+    // Кнопки управления таймером
+    document.getElementById('btnStart').addEventListener('click', () => sendAction('start'));
+    document.getElementById('btnPause').addEventListener('click', () => sendAction('pause'));
+    document.getElementById('btnReset').addEventListener('click', () => sendAction('reset'));
+    document.getElementById('btnPlus1').addEventListener('click', () => sendAction('adjust', { deltaSec: 60 }));
+    document.getElementById('btnMinus1').addEventListener('click', () => sendAction('adjust', { deltaSec: -60 }));
+
+    document.querySelectorAll('.btn-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const min = Number(btn.dataset.min);
+        sendAction('set_duration', { seconds: min * 60 });
+      });
+    });
+
+    document.getElementById('btnSetCustom').addEventListener('click', () => {
+      const val = parseFloat(document.getElementById('customMinInput').value);
+      if (val > 0) {
+        sendAction('set_duration', { seconds: Math.round(val * 60) });
+      }
+    });
+
+    // Сохранение порогов и цветов
+    function saveSettings() {
+      const yMin = Math.max(0, parseInt(yellowMinInput.value, 10) || 0);
+      const ySec = Math.max(0, Math.min(59, parseInt(yellowSecInput.value, 10) || 0));
+      const rMin = Math.max(0, parseInt(redMinInput.value, 10) || 0);
+      const rSec = Math.max(0, Math.min(59, parseInt(redSecInput.value, 10) || 0));
+
+      sendAction('settings', {
+        settings: {
+          blackBackground: selectedBlackBg,
+          greenColor: greenColorInput.value,
+          yellowColor: yellowColorInput.value,
+          redColor: redColorInput.value,
+          yellowThresholdSec: yMin * 60 + ySec,
+          redThresholdSec: rMin * 60 + rSec
+        }
+      });
+    }
+
+    modeColorBg.addEventListener('click', () => {
+      updateModeButtons(false);
+      saveSettings();
+    });
+    modeBlackBg.addEventListener('click', () => {
+      updateModeButtons(true);
+      saveSettings();
+    });
+
+    document.getElementById('btnSaveSettings').addEventListener('click', saveSettings);
+    greenColorInput.addEventListener('change', saveSettings);
+    yellowColorInput.addEventListener('change', saveSettings);
+    redColorInput.addEventListener('change', saveSettings);
+
+    // Сообщения на экран
+    const msgInput = document.getElementById('msgInput');
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        msgInput.value = chip.dataset.text;
+        sendAction('message', { message: msgInput.value, show: true });
+      });
+    });
+
+    document.getElementById('btnShowMsg').addEventListener('click', () => {
+      sendAction('message', { message: msgInput.value, show: true });
+    });
+
+    document.getElementById('btnHideMsg').addEventListener('click', () => {
+      sendAction('message', { message: msgInput.value, show: false });
+    });
+
+    // Инициализация при загрузке
+    (async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const urlPin = (params.get('pin') || '').trim();
+
+      if (/^\d{4}$/.test(urlPin)) {
+        await joinByPin(urlPin);
+        return;
+      }
+
+      if (urlPin) {
+        showStartScreen('PIN в ссылке должен состоять из 4 цифр.');
+        return;
+      }
+
+      showStartScreen('');
+    })();
+  </script>
+</body>
+</html>
