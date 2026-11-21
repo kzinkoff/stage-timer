@@ -18,7 +18,7 @@ No native app installation required — everything runs in a mobile or tablet br
 - **Speaker Messages:** Send quick presets (*"2 minutes left"*, *"Move to Q&A"*, *"Time's up!"*) or custom text. The message appears in huge text below the clock while timer digits automatically scale down to fit cleanly. While a message is visible on stage, a pulsing red **`● ON SCREEN`** indicator blinks on the remote.
 - **Drift-Free Sync:** Time is calculated from a target server timestamp (`endTimeMs`) adjusted for client clock skew (`serverTimeOffset`) over Server-Sent Events (SSE) — no network ticks, instant auto-resync after reconnects.
 - **Restart Persistence:** Active rooms, timers, and color settings are automatically saved to `rooms-state.json` and restored on server restart.
-- **Screen Wake Lock:** Uses the browser `Wake Lock API` plus fullscreen mode on `/stage` to keep the tablet screen awake.
+- **Screen Wake Lock & NoSleep Fallback:** Uses the browser `Wake Lock API` paired with an embedded looping `<video playsinline muted loop>` fallback (`NoSleep` technique) and fullscreen mode on `/stage` so the tablet screen stays awake even over plain `http://` on a local network or on older iPads.
 
 ---
 

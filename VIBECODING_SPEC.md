@@ -62,8 +62,9 @@ Each organizer creates an isolated room so halls/stages never interfere with one
    - When an organizer message is shown: render the message box in normal flex flow below the timer (never overlapping digits!), automatically shrink timer digits to min(17vw, 22vmin), and render the message huge at clamp(42px, 10.5vmin, 140px) (or clamp(32px, 8vmin, 100px) when > 35 chars) inside a high-contrast bordered box.
 3. Overtime behavior after 00:00:
    - In BOTH color modes (colored background and black screen), when remaining <= 0 and status === 'running', flash the entire screen red/dark (1s CSS animation), display "TIME'S UP!" prominently, and count negative overtime (-00:05).
-4. Screen Wake Lock:
-   - Use Screen Wake Lock API (navigator.wakeLock.request('screen')), auto-request on any click/touchstart, on PIN connect, and on visibilitychange === 'visible'.
+4. Screen Wake Lock & NoSleep Fallback:
+   - Use dual anti-sleep protection: Screen Wake Lock API (`navigator.wakeLock.request('screen')`) PLUS a hidden looping muted `<video playsinline muted loop>` fallback (NoSleep technique) so the tablet screen stays awake even over plain HTTP on a local network or on older iPads.
+   - Auto-request on PIN connect, on any click/touchstart, on visibilitychange === 'visible', and via a 15-second watchdog timer.
    - Top bar shows connection dot, PIN, Wake Lock status badge ("☀️ Screen Awake" / "👆 Tap screen to keep awake"), "Change PIN" button, and "Fullscreen" button (requestFullscreen()).
 ```
 
